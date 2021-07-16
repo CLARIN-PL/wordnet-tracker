@@ -2,7 +2,7 @@ FROM python:3.7-alpine
 LABEL maintainer="Tomasz Naskręt <tomasz.naskret@pwr.edu.pl>"
 
 RUN apk add --update --no-cache --virtual .tmp-build-deps \
-        gcc libc-dev linux-headers
+        gcc libc-dev linux-headers build-base
 
 WORKDIR /app
 COPY ./app .
