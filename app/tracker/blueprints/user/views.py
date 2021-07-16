@@ -10,7 +10,32 @@ from tracker.blueprints.user.decorator import anonymous_required
 from tracker.blueprints.user.forms import LoginForm, SearchForm, UserActivityForm
 from tracker.blueprints.user.models import User, user_activity_day, user_activity_between_dates, user_activity_month
 
+from tracker.extensions import openid_connect
+from flask_oidc.discovery import discover_OP_information
+
+
 user = Blueprint('user', __name__, template_folder='templates')
+
+
+@user.route('/keycloak/auth')
+def keycloak_auth():
+    return 'It will be redirect to authentication server :D'
+
+
+@user.route('/keycloak/info')
+def op_info():
+    op_info = discover_OP_information('http://keycloak:8080/auth/realms/my_realm')
+    content = ''
+    for key, value in zip(op_info.keys(), op_info.values()):
+        content += f'<b>{key}:</b><br>{"&nbsp"*4} {value}<br>'
+
+    return content
+
+
+@user.route('/keycloak/private')
+@openid_connect.require_login
+def private():
+    return 'Private page <a href="/">Home</a>'
 
 
 @user.route('/login', methods=['GET', 'POST'])

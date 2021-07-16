@@ -25,6 +25,14 @@
           </div>
         </div>
       {% endcall %}
+      <hr>
+      <div class="row">
+        <div class="col-md-12">
+          <a href="{{ url_for('user.keycloak_auth') }}" role="button" class="btn btn-primary btn-block">
+            Continue with keycloak
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 {% endblock %}
