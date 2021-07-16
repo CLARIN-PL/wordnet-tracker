@@ -15,6 +15,16 @@ services:
     ports:
       - '9000:5000'
 
+# ======== Development only ========
+  keycloak:
+    image: jboss/keycloak
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+    ports:
+      - '8080:8080'
+# ======== Development only ========
+
   redis:
     image: redis:5.0.5-alpine
     ports:
