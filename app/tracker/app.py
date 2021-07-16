@@ -14,6 +14,7 @@ from tracker.extensions import (
     debug_toolbar,
     db,
     login_manager,
+    openid_connect,
     limiter,
     csrf
 )
@@ -114,6 +115,7 @@ def __extensions(app):
     csrf.init_app(app)
     db.init_app(app)
     login_manager.init_app(app)
+    openid_connect.init_app(app)
     limiter.init_app(app)
 
     return None

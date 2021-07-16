@@ -2,6 +2,7 @@ import os
 
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_login import LoginManager
+from flask_oidc import OpenIDConnect
 from flask_wtf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
@@ -13,6 +14,7 @@ debug_toolbar = DebugToolbarExtension()
 csrf = CSRFProtect()
 db = SQLAlchemy()
 login_manager = LoginManager()
+openid_connect = OpenIDConnect()
 limiter = Limiter(key_func=get_remote_address)
 
 cache_supported_backends = {
