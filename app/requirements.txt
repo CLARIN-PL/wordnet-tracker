@@ -26,6 +26,7 @@ Flask-Admin==1.5.6
 flask-debugtoolbar==0.10.0
 flask-less==0.4
 Flask-Login==0.4.*
+flask-oidc==1.4.0
 Flask-Limiter==1.1.*
 python-memcached==1.59
 redis==3.2.1
