@@ -16,6 +16,15 @@ SERVER_NAME = os.environ.get('SERVER_NAME')
 REMEMBER_COOKIE_DURATION = timedelta(minutes=30)
 SECRET_KEY = '!$flhgsdf324NO%$#SOET!$!'
 
+# OpenIDConnect
+OIDC_CLIENT_SECRETS = 'config/client_secrets.json'
+OIDC_ID_TOKEN_COOKIE_SECURE = False
+OIDC_REQUIRE_VERIFIED_EMAIL = False
+OIDC_VALID_ISSUERS = [
+    'http://localhost:8080/auth/realms/my_realm'
+]
+OIDC_OPENID_REALM = 'http://localhost:5000/oidc_callback'
+
 # SQL ALCHEMY
 mysql_uri_template = 'mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}'
 SQLALCHEMY_DATABASE_URI = mysql_uri_template.format(**{
