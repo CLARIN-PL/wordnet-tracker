@@ -1,4 +1,4 @@
-CREATE VIEW view_tracker_synsets_history AS
+CREATE OR REPLACE VIEW view_tracker_synsets_history AS
 SELECT t.id as id, t.datetime, t.user,
 case
 	when t.inserted = 1 and t.table ='synset' then 'created'
@@ -26,9 +26,9 @@ FROM tracker t
 WHERE t.table in ("synset","unitandsynset")
 AND ( uas.tid IS NOT NULL OR ts.tid IS NOT NULL )
 AND ( t.inserted = 1 OR t.deleted = 1 OR t.data_before_change IS NOT NULL)
-ORDER BY t.id DESC
+ORDER BY t.id DESC;
 
-CREATE VIEW view_tracker_synsets_relations_history AS
+CREATE OR REPLACE VIEW view_tracker_synsets_relations_history AS
 SELECT
  t.id as id, t.datetime, t.user,
 case
@@ -48,9 +48,9 @@ LEFT JOIN `synset` tparent ON (tparent.ID=tsyn.PARENT_ID)
 LEFT JOIN `synset` tchild ON (tchild.ID=tsyn.CHILD_ID)
 WHERE t.table = "synsetrelation"
 AND ( t.inserted = 1 OR t.deleted = 1 OR t.data_before_change IS NOT NULL)
-ORDER BY t.id DESC
+ORDER BY t.id DESC;
 
-CREATE VIEW view_tracker_sense_relations_history AS
+CREATE OR REPLACE VIEW view_tracker_sense_relations_history AS
 SELECT
  t.id as id, t.datetime, t.user,
 case
@@ -70,9 +70,9 @@ LEFT JOIN `lexicalunit` tparent ON (tparent.ID=tsyn.PARENT_ID)
 LEFT JOIN `lexicalunit` tchild ON (tchild.ID=tsyn.CHILD_ID)
 WHERE t.table = "lexicalrelation"
 AND ( t.inserted = 1 OR t.deleted = 1 OR t.data_before_change IS NOT NULL)
-ORDER BY t.id DESC
+ORDER BY t.id DESC;
 
-CREATE VIEW view_tracker_sense_history AS
+CREATE OR REPLACE VIEW view_tracker_sense_history AS
 SELECT tr.id, tr.datetime, tr.user,
 case
 	when tr.inserted = 1  then 'created'
@@ -90,10 +90,10 @@ LEFT JOIN tracker tr2 ON (tr.id = tr2.data_before_change)
 LEFT JOIN tracker_lexicalunit tlu2 ON (tr2.tid = tlu2.tid)
 LEFT JOIN lexicalunit lu ON (lu.ID = tlu.ID)
 WHERE tr.data_before_change IS NULL AND tr.`table` = 'lexicalunit'
-ORDER BY tr.datetime desc
+ORDER BY tr.datetime desc;
 
 
-CREATE VIEW view_emotion_disagreement AS
+CREATE OR REPLACE VIEW view_emotion_disagreement AS
 SELECT l.ID as sense_id, concat(l.lemma,' ', l.variant) as lemma, l.status,
           substr(innerCnt.markedness, 1, locate(';', innerCnt.markedness) -1) as markedness0,
           substr(innerCnt.markedness FROM locate(';', innerCnt.markedness) + 1) as markedness1,
@@ -114,4 +114,4 @@ SELECT l.ID as sense_id, concat(l.lemma,' ', l.variant) as lemma, l.status,
         WHERE substr(innerCnt.markedness, 1, locate(';', innerCnt.markedness) -1) NOT LIKE ''
           AND  substr(innerCnt.markedness FROM locate(';', innerCnt.markedness) + 1) NOT LIKE ''
           AND substr(innerCnt.markedness, 1, locate(';', innerCnt.markedness) -1) NOT LIKE
-              substr(innerCnt.markedness FROM locate(';', innerCnt.markedness) + 1)
+              substr(innerCnt.markedness FROM locate(';', innerCnt.markedness) + 1);

@@ -1,0 +1,414 @@
+{% extends 'layouts/app.html' %}
+{% import 'macros/items.html' as items %}
+
+{% block title %}Sense{% endblock %}
+
+{% block content %}
+<div id="page-wrapper">
+    <div class="row">
+        <div class="col-sm-12">
+            <h3 class="page-header"><i class="fa fa-object-group fa-fw"></i> Sense</h3>
+        </div>
+    </div>
+    <div class="row margin-bottom-15">
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-th-list"></i> Sense Properties
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                            <tr>
+                                <td class="col-sm-4 text-right">Id</td>
+                                <td>{{ sense.id }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Lemma</td>
+                                <td>{{ sense.lemma }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Variant</td>
+                                <td>{{ sense.variant }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Part of speech</td>
+                                <td><span class="label label-default">{{ pos[sense.pos|string] }}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Domain</td>
+                                <td>{{ domain[sense.domain|string] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Aspect</td>
+                                <td>{{ aspect[sense.verb_aspect|string] }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Comment</td>
+                                <td>{{ sense.comment }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Owner</td>
+                                <td>{{ sense.owner }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Status</td>
+                                <td><span class="label {{ status[sense.status|string]['tag'] }}">{{ status[sense.status|string]['value'] }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-right">Status Error Comment</td>
+                                <td>{% if sense.error_comment is not none %} {{ sense.error_comment }} {% endif %}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-th-list"></i> Sense History
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Audit Log</th>
+                                <th class="text-center">Operation</th>
+                                <th class="text-center">Lemma</th>
+                                <th class="text-center">Variant</th>
+                                <th class="text-center">Part of speech</th>
+                                <th class="text-center">Domain</th>
+                                <th class="text-center">Comment</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for s in sense_history %}
+                            <tr>
+                                <td>
+                                    <div class="text-center small-log bold-log">
+                                        {{ s[1] }}
+                                    </div>
+                                    <div class="text-center small-log">
+                                        <time class="short-date"
+                                              data-datetime="{{ s[0] }}">{{ s[0] }}
+                                        </time>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        {% if s[2]=='created' %}
+                                        <span class="label label-success">Created</span>
+                                        {% elif s[2]=='removed' %}
+                                        <span class="label label-danger">Removed</span>
+                                        {% elif s[2]=='modified' %}
+                                        <span class="label label-info">Modified</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{% if s[3] is not none %} {{ s[3] }} {% endif %}</td>
+                                <td>{% if s[4] is not none %} {{ s[4] }} {% endif %}</td>
+                                <td><span class="label label-default">{{ pos[s[5]|string] }}</span></td>
+                                <td>{{ domain[s[6]|string] }}</td>
+                                <td>{% if s[7] is not none %} {{ s[7] }} {% endif %}</td>
+                                <td><span class="label {{ status[s[8]|string]['tag'] }}">{{ status[s[8]|string]['value'] }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-sign-in"></i> Incoming Relations
+                </div>
+                <div class="panel-body">
+                    {% if incoming_rel.rowcount == 0 %}
+                    <h5 class="text-center">No incoming relations found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Relation</th>
+                                <th class="text-center">Sense</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for r in incoming_rel %}
+                            <tr>
+                                <td>{{ r[0] }}</td>
+                                <td>
+                                    <a href="{{ url_for('sense.sense_by_id', id=r[1]) }}"> {{ r[2] }}</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-sign-in fa-fw"></i> Incoming Relations History
+                </div>
+                <div class="panel-body">
+                    {% if not incoming_history %}
+                    <h5 class="text-center">No incoming relations history found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Audit Log</th>
+                                <th class="text-center">Operation</th>
+                                <th class="text-center">Relation</th>
+                                <th class="text-center">Sense</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for r in incoming_history %}
+                            <tr>
+                                <td>
+                                    <div class="text-center small-log bold-log">
+                                        {{ r.user }}
+                                    </div>
+                                    <div class="text-center small-log">
+                                        <time class="short-date"
+                                              data-datetime="{{ r.datetime }}">{{ r.datetime }}
+                                        </time>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        {% if r.operation=='created' %}
+                                        <span class="label label-success">Created</span>
+                                        {% elif r.operation=='removed' %}
+                                        <span class="label label-danger">Removed</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ r.relation_name }}</td>
+                                <td>
+                                    <a href="{{ url_for('sense.sense_by_id', id=r.target_id) }}"> {{ r.target_unitstr
+                                        }}</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-sign-out fa-fw"></i> Outgoing Relations
+                </div>
+                <div class="panel-body">
+                    {% if outgoing_rel.rowcount==0 %}
+                    <h5 class="text-center">No outgoing relations found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Relation</th>
+                                <th class="text-center">Sense</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for r in outgoing_rel %}
+                            <tr>
+                                <td>{{ r[0] }}</td>
+                                <td>
+                                    <a href="{{ url_for('sense.sense_by_id', id=r[1]) }}"> {{ r[2] }}</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-sign-out fa-fw"></i> Outgoing Relations History
+                </div>
+                <div class="panel-body">
+                    {% if not outgoing_history %}
+                    <h5 class="text-center">No outgoing relations history found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Audit Log</th>
+                                <th class="text-center">Operation</th>
+                                <th class="text-center">Relation</th>
+                                <th class="text-center">Sense</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for r in outgoing_history %}
+                            <tr>
+                                <td>
+                                    <div class="text-center small-log bold-log">
+                                        {{ r.user }}
+                                    </div>
+                                    <div class="text-center small-log">
+                                        <time class="short-date"
+                                              data-datetime="{{ r.datetime }}">{{ r.datetime }}
+                                        </time>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        {% if r.operation=='created' %}
+                                        <span class="label label-success">Created</span>
+                                        {% elif r.operation=='removed' %}
+                                        <span class="label label-danger">Removed</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ r.relation_name }}</td>
+                                <td>
+                                    {% if r.target_id is not none %}
+                                    <a href="{{ url_for('sense.sense_by_id', id=r.target_id) }}"> {{ r.target_unitstr
+                                        }}</a>
+                                    {% else %}
+                                    {{ r.target_unitstr }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-heart fa-fw"></i> Emotions
+                </div>
+                <div class="panel-body">
+                    {% if emotions.total == 0 %}
+                    <h5 class="text-center">Emotional annotations not found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Audit Log</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Super Annotation</th>
+                                <th class="text-center">Emotions</th>
+                                <th class="text-center">Valuations</th>
+                                <th class="text-center">Markedness</th>
+                                <th class="text-center">Example 1</th>
+                                <th class="text-center">Example 2</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for e in emotions %}
+                            <tr>
+                                <td>
+                                    <div class="text-center small-log bold-log">
+                                        {{ e.owner }}
+                                    </div>
+                                    <div class="text-center small-log">
+                                        <time class="short-date"
+                                              data-datetime="{{ e.creation_date}}">{{ e.creation_date }}
+                                        </time>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-center">{{ e.status }}</div>
+                                </td>
+                                <td>{% if e.super_annotation =='0' %} Yes {% else %} No {% endif %}</td>
+                                {% set emo = e.emotions.split(';') %}
+                                <td>
+                                    {% for i in emo %}
+                                    <span class="label label-default">{{ i }}</span>
+                                    {% endfor %}
+                                </td>
+                                {% set valu = e.valuations.split(';') %}
+                                <td>
+                                    {% for i in valu %}
+                                    <span class="label label-default">{{ i }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>{{ e.markedness }}</td>
+                                <td>{% if e.example1 is not none %} {{ e.example1 }} {% endif %}</td>
+                                <td>{% if e.example2 is not none %} {{ e.example2 }} {% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-sign-out fa-fw"></i> Morphology
+                </div>
+                <div class="panel-body">
+                    {% if morpho.rowcount==0 %}
+                    <h5 class="text-center">No morphological annotations found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Word From</th>
+                                <th class="text-center">Tag</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for m in morpho %}
+                            <tr>
+                                <td>{{ m.word_form }}</td>
+                                <td>{{ m.morphological_tag }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

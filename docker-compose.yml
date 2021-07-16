@@ -1,20 +1,43 @@
 version: '3'
 
 services:
-  website:
+  web:
     build: .
-    command: >
-      gunicorn -c "python:config.gunicorn" --reload "tracker.app:create_app()"
-    links:
-      - memcached:memcached
-    env_file:
-      - '.env'
+    env_file: .env
     volumes:
-      - '.:/app'
+      - "./app:/app"
+    depends_on:
+      - redis
+      - celery
+    command: sh -c "python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_DATABASE} -t 5 &&
+      python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_USERS_DATABASE} -t 5 &&
+      gunicorn -c 'python:config.gunicorn' --reload 'tracker.app:create_app()'"
     ports:
       - '9000:5000'
 
-  memcached:
-    image: memcached:alpine
+  redis:
+    image: redis:5.0.5-alpine
     ports:
-      - "11211:11211"
+      - "6379"
+
+  celery:
+    image: tracker_web
+    env_file: .env
+    volumes:
+    - "./app:/app"
+    depends_on:
+      - redis
+    command: sh -c "python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_DATABASE} -t 5 &&
+      python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_USERS_DATABASE} -t 5 &&
+      python celery_start.py"
+
+  celerybeat:
+    image: tracker_web
+    env_file: .env
+    volumes:
+    - "./app:/app"
+    depends_on:
+    - redis
+    command: sh -c "python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_DATABASE} -t 5 &&
+      python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_USERS_DATABASE} -t 5 &&
+      python celerybeat_start.py"
