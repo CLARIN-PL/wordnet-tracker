@@ -22,6 +22,20 @@ def keycloak_auth():
     return 'It will be redirect to authentication server :D'
 
 
+@user.route('/keycloak/user')
+def keycloak_user():
+    fields = ['email', 'profile', 'roles']
+    access_token = openid_connect.get_access_token()
+    user_info = openid_connect.user_getfield(fields, access_token)
+    return str(user_info)
+
+
+@user.route('/keycloak/token')
+def keycloak_token():
+    access_token = openid_connect.get_access_token()
+    return str(access_token)
+
+
 @user.route('/keycloak/info')
 def op_info():
     op_info = discover_OP_information('http://keycloak:8080/auth/realms/my_realm')
@@ -39,7 +53,7 @@ def private():
 
 
 @user.route('/login', methods=['GET', 'POST'])
-@anonymous_required()
+# @anonymous_required()
 def login():
     form = LoginForm()
 
@@ -67,7 +81,8 @@ def login():
 
 
 @user.route('/profile')
-@login_required
+# @login_required
+@openid_connect.require_login
 def profile():
     q = request.args.get('q', '')
     u = current_user
@@ -96,7 +111,8 @@ def profile():
 
 @user.route('/users', defaults={'page': 1})
 @user.route('/users/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def users(page):
     search_form = SearchForm()
 
@@ -120,7 +136,8 @@ def users(page):
 
 
 @user.route("/logout")
-@login_required
+# @login_required
+@openid_connect.require_login
 def logout():
     logout_user()
     flash('You have been logged out.', 'success')
@@ -128,7 +145,8 @@ def logout():
 
 
 @user.route('/users/activity')
-@login_required
+# @login_required
+@openid_connect.require_login
 def users_activity():
 
     search_from = UserActivityForm()

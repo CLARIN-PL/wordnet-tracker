@@ -7,13 +7,15 @@ from lib.util_sqlalchemy import paginate
 from tracker.blueprints.emotion.forms import EmotionDisagreementForm
 from tracker.blueprints.emotion.models import EmotionDisagreement
 from tracker.blueprints.synset.models import get_user_emotion_list
+from tracker.extensions import openid_connect
 
 emotion = Blueprint('emotion', __name__, template_folder='templates')
 
 
 @emotion.route('/annotator-disagreement', defaults={'page': 1})
 @emotion.route('/annotator-disagreement/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def annotator_disagreement(page):
     filter_form = EmotionDisagreementForm()
 

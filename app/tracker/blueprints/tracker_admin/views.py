@@ -6,7 +6,7 @@ from sqlalchemy import select
 from werkzeug.utils import redirect
 
 from tracker.blueprints.tracker_admin import models
-from tracker.extensions import db
+from tracker.extensions import db, openid_connect
 from urllib.parse import quote
 
 tracker_admin = Blueprint('tracker_admin', __name__, template_folder='templates')
@@ -31,7 +31,8 @@ class AdminQueryView(sqla.ModelView):
 
 
 @tracker_admin.route('/admin_query/<int:pk>/')
-@login_required
+# @login_required
+@openid_connect.require_login
 def admin_query(pk):
     keys, result, query_name = models.AdminQuery.results(pk)
     context = {
@@ -44,7 +45,8 @@ def admin_query(pk):
 
 
 @tracker_admin.route('/admin_query/<int:pk>/csv')
-@login_required
+# @login_required
+@openid_connect.require_login
 def admin_query_csv(pk):
     headings, rows, query_name = models.AdminQuery.results(pk)
     csv_content = ",".join(headings)
@@ -59,7 +61,8 @@ def admin_query_csv(pk):
 
 
 @tracker_admin.route('/statistics/')
-@login_required
+# @login_required
+@openid_connect.require_login
 def admin_query_list_statistic():
     engine = db.get_engine(current_app)
     connection = engine.connect()
@@ -80,7 +83,8 @@ def admin_query_list_statistic():
 
 
 @tracker_admin.route('/diagnostics/')
-@login_required
+# @login_required
+@openid_connect.require_login
 def admin_query_list_diagnostic():
     engine = db.get_engine(current_app)
     connection = engine.connect()

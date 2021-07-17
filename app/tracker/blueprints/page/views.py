@@ -7,13 +7,14 @@ from flask_login import login_required
 
 from tracker.blueprints.page.models import find_created_items_today, find_user_activity_month, \
     user_activity_cached
-from tracker.extensions import cache
+from tracker.extensions import cache, openid_connect
 
 page = Blueprint('page', __name__, template_folder='templates')
 
 
 @page.route('/')
-@login_required
+# @login_required
+@openid_connect.require_login
 def home():
     result = cache.get("dashboard_today_items")
     if result is None:

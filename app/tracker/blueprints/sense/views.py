@@ -9,6 +9,7 @@ from tracker.blueprints.sense.forms import SenseRelationsHistoryForm, SenseHisto
 from tracker.blueprints.sense.models import get_sense_relation_list, TrackerSenseRelationsHistory, Sense, \
     find_sense_history, find_sense_incoming_relations, find_sense_outgoing_relations, TrackerSenseHistory, Morphology
 from tracker.blueprints.synset.models import get_user_name_list
+from tracker.extensions import openid_connect
 
 sense = Blueprint('sense', __name__, template_folder='templates')
 
@@ -19,7 +20,8 @@ class SenseistoryForm(object):
 
 @sense.route('/senses/history', defaults={'page': 1})
 @sense.route('/senses/history/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def senses_history(page):
 
     filter_form = SenseHistoryForm()
@@ -59,7 +61,8 @@ def senses_history(page):
 
 @sense.route('/senses/relations/history', defaults={'page': 1})
 @sense.route('/senses/relations/history/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def senses_relations_history(page):
     filter_form = SenseRelationsHistoryForm()
 
@@ -96,7 +99,8 @@ def senses_relations_history(page):
 
 
 @sense.route('/sense/<int:id>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def sense_by_id(id):
 
     sense = Sense.query.get(id)

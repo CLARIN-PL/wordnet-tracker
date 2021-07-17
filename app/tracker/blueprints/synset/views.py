@@ -9,6 +9,7 @@ from tracker.blueprints.synset.forms import SynsetHistoryForm, SynsetRelationsHi
 from tracker.blueprints.synset.models import TrackerSynsetsHistory, get_user_name_list, \
     TrackerSynsetsRelationsHistory, get_synset_relation_list, Synset, find_synset_incoming_relations, \
     find_synset_outgoing_relations, find_synset_senses, find_synset_sense_history, find_synset_history
+from tracker.extensions import openid_connect
 
 
 synset = Blueprint('synset', __name__, template_folder='templates')
@@ -16,7 +17,8 @@ synset = Blueprint('synset', __name__, template_folder='templates')
 
 @synset.route('/synsets', defaults={'page': 1})
 @synset.route('/synsets/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def synsets(page):
     paginated_users = Synset.query \
         .filter(Synset.search(request.args.get('gq', ''))) \
@@ -28,7 +30,8 @@ def synsets(page):
 
 @synset.route('/synsets/relations/history', defaults={'page': 1})
 @synset.route('/synsets/relations/history/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def synsets_relations_history(page):
     filter_form = SynsetRelationsHistoryForm()
 
@@ -66,7 +69,8 @@ def synsets_relations_history(page):
 
 @synset.route('/synsets/history', defaults={'page': 1})
 @synset.route('/synsets/history/page/<int:page>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def synsets_history(page):
     filter_form = SynsetHistoryForm()
 
@@ -98,7 +102,8 @@ def synsets_history(page):
 
 
 @synset.route('/synsets/<int:id>')
-@login_required
+# @login_required
+@openid_connect.require_login
 def synset_by_id(id):
 
     synset = Synset.query.get(id)
