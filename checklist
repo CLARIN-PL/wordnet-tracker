@@ -1,0 +1,30 @@
+HOME: +
+
+PROFILE TOPBAR:
+  - user profile
+  - logout
+
+DASHBOARD:
+  - view details1 red
+  - view details2 green
+  - view details3 orange
+  - view details4 pink
+
+SYNSETS:
+  - synset history
+  - synset relations history
+
+SENSES:
+  - sense history
+  - sense relation history
+
+EMOTIONS:
+  - annotator disagreement
+
+USERS:
+  - users list
+  - users activity summary
+
+DIAGNOSTICS:
+
+ADMIN PANEL:
