@@ -9,6 +9,8 @@ __pycache__/
 
 .idea/*
 .env
+**/config/client_secrets.json
+**/realm-export.json
 
 # IDE
 .vscode
