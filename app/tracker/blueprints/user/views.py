@@ -1,59 +1,22 @@
 from time import gmtime, strftime
 
-from flask import Blueprint, redirect, request, flash, url_for, render_template
+from flask import Blueprint, redirect, request, flash, url_for, render_template, make_response, current_app
 
-from flask_login import login_user, logout_user, login_required, current_user
+from flask_login import login_user, logout_user, current_user
 from sqlalchemy import text
-from lib.safe_next_url import safe_next_url
 
 from tracker.blueprints.user.decorator import anonymous_required
 from tracker.blueprints.user.forms import LoginForm, SearchForm, UserActivityForm
 from tracker.blueprints.user.models import User, user_activity_day, user_activity_between_dates, user_activity_month
 
 from tracker.extensions import openid_connect
-from flask_oidc.discovery import discover_OP_information
 
 
 user = Blueprint('user', __name__, template_folder='templates')
 
 
-@user.route('/keycloak/auth')
-def keycloak_auth():
-    return 'It will be redirect to authentication server :D'
-
-
-@user.route('/keycloak/user')
-def keycloak_user():
-    fields = ['email', 'profile', 'roles']
-    access_token = openid_connect.get_access_token()
-    user_info = openid_connect.user_getfield(fields, access_token)
-    return str(user_info)
-
-
-@user.route('/keycloak/token')
-def keycloak_token():
-    access_token = openid_connect.get_access_token()
-    return str(access_token)
-
-
-@user.route('/keycloak/info')
-def op_info():
-    op_info = discover_OP_information('http://keycloak:8080/auth/realms/my_realm')
-    content = ''
-    for key, value in zip(op_info.keys(), op_info.values()):
-        content += f'<b>{key}:</b><br>{"&nbsp"*4} {value}<br>'
-
-    return content
-
-
-@user.route('/keycloak/private')
-@openid_connect.require_login
-def private():
-    return 'Private page <a href="/">Home</a>'
-
-
 @user.route('/login', methods=['GET', 'POST'])
-# @anonymous_required()
+@anonymous_required()
 def login():
     form = LoginForm()
 
@@ -77,11 +40,13 @@ def login():
         else:
             flash('Identity or password is incorrect.', 'error')
 
-    return render_template('user/login.html', form=form)
+    return render_template(
+        'user/login.html',
+        form=form
+    )
 
 
 @user.route('/profile')
-# @login_required
 @openid_connect.require_login
 def profile():
     q = request.args.get('q', '')
@@ -106,12 +71,17 @@ def profile():
     results = user_activity_month(strftime("%Y", gmtime()), strftime("%m", gmtime()), q)
     items, total = calculate_stats(results)
 
-    return render_template('user/profile.html', user=u, stats=items)
+    return render_template(
+        'user/profile.html',
+        user=u,
+        stats=items,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
 
 
 @user.route('/users', defaults={'page': 1})
 @user.route('/users/page/<int:page>')
-# @login_required
 @openid_connect.require_login
 def users(page):
     search_form = SearchForm()
@@ -130,22 +100,31 @@ def users(page):
             .order_by(User.role.asc(), text(order_values)) \
             .paginate(page, 50, True)
 
-    return render_template('user/users.html',
-                           form=search_form,
-                           users=paginated_users)
+    return render_template(
+        'user/users.html',
+        form=search_form,
+        users=paginated_users,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
 
 
 @user.route("/logout")
-# @login_required
-@openid_connect.require_login
 def logout():
+    if openid_connect.user_loggedin:
+        resp = make_response()
+        # resp.set_cookie('oidc_id_token', '', expires=0)
+        resp.delete_cookie('oidc_id_token')
+        # openid_connect.logout()
+
+        return redirect(url_for('page.home'))
+
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('user.login'))
 
 
 @user.route('/users/activity')
-# @login_required
 @openid_connect.require_login
 def users_activity():
 
@@ -158,10 +137,14 @@ def users_activity():
 
     items, total = calculate_stats(stats)
 
-    return render_template('user/users-activity.html',
-                           form=search_from,
-                           stats=items,
-                           total=total)
+    return render_template(
+        'user/users-activity.html',
+        form=search_from,
+        stats=items,
+        total=total,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
 
 
 def calculate_stats(stats):
