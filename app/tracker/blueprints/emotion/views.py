@@ -1,7 +1,9 @@
 from flask import (
     Blueprint,
-    render_template, request)
-from flask_login import login_required
+    render_template,
+    request,
+    current_app
+)
 
 from lib.util_sqlalchemy import paginate
 from tracker.blueprints.emotion.forms import EmotionDisagreementForm
@@ -14,7 +16,6 @@ emotion = Blueprint('emotion', __name__, template_folder='templates')
 
 @emotion.route('/annotator-disagreement', defaults={'page': 1})
 @emotion.route('/annotator-disagreement/page/<int:page>')
-# @login_required
 @openid_connect.require_login
 def annotator_disagreement(page):
     filter_form = EmotionDisagreementForm()
@@ -38,5 +39,7 @@ def annotator_disagreement(page):
         '/emotion/annotator-disagreement.html',
         form=filter_form,
         users=users,
-        emotions=pagination
+        emotions=pagination,
+        openid_connect=openid_connect,
+        current_app=current_app
     )

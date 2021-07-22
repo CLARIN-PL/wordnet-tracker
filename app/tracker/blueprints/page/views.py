@@ -1,9 +1,7 @@
-import datetime
 from calendar import monthrange
 from time import strftime, gmtime
 
-from flask import Blueprint, render_template, jsonify, request
-from flask_login import login_required
+from flask import Blueprint, render_template, jsonify, request, current_app
 
 from tracker.blueprints.page.models import find_created_items_today, find_user_activity_month, \
     user_activity_cached
@@ -13,7 +11,6 @@ page = Blueprint('page', __name__, template_folder='templates')
 
 
 @page.route('/')
-# @login_required
 @openid_connect.require_login
 def home():
     result = cache.get("dashboard_today_items")
@@ -24,7 +21,12 @@ def home():
             result.append(i)
         cache.set("dashboard_today_items", result, timeout=10 * 60)
 
-    return render_template('page/dashboard.html', stats=result)
+    return render_template(
+        'page/dashboard.html',
+        stats=result,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
 
 
 @page.route('/api/users/activity/now')

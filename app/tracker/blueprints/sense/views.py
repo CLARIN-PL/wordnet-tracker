@@ -1,7 +1,8 @@
 from flask import (
     Blueprint,
-    render_template, request)
-from flask_login import login_required
+    render_template,
+    request
+)
 
 from lib.util_sqlalchemy import paginate, status, parts_of_speech, domain, aspect
 from tracker.blueprints.emotion.models import Emotion
@@ -20,7 +21,6 @@ class SenseistoryForm(object):
 
 @sense.route('/senses/history', defaults={'page': 1})
 @sense.route('/senses/history/page/<int:page>')
-# @login_required
 @openid_connect.require_login
 def senses_history(page):
 
@@ -55,13 +55,13 @@ def senses_history(page):
         sense_history=pagination,
         status=status(),
         pos=parts_of_speech(),
-        domain=domain()
+        domain=domain(),
+        openid_connect=openid_connect
     )
 
 
 @sense.route('/senses/relations/history', defaults={'page': 1})
 @sense.route('/senses/relations/history/page/<int:page>')
-# @login_required
 @openid_connect.require_login
 def senses_relations_history(page):
     filter_form = SenseRelationsHistoryForm()
@@ -94,7 +94,8 @@ def senses_relations_history(page):
         form=filter_form,
         users=users,
         relations=relations,
-        history=pagination
+        history=pagination,
+        openid_connect=openid_connect
     )
 
 
@@ -136,5 +137,6 @@ def sense_by_id(id):
         outgoing_history=outgoing_history,
         incoming_history=incoming_history,
         emotions=emotions,
-        morpho=morpho
+        morpho=morpho,
+        openid_connect=openid_connect
     )

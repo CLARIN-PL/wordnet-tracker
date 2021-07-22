@@ -1,7 +1,7 @@
 import flask_admin
 from flask import url_for, request, current_app, render_template, abort, make_response, Blueprint
 from flask_admin.contrib import sqla
-from flask_login import login_required, current_user
+from flask_login import current_user
 from sqlalchemy import select
 from werkzeug.utils import redirect
 
@@ -15,23 +15,34 @@ tracker_admin = Blueprint('tracker_admin', __name__, template_folder='templates'
 class AdminIndexView(flask_admin.AdminIndexView):
 
     def is_accessible(self):
+        if openid_connect.user_loggedin:
+            return current_app.config['KEYCLOAK_ADMIN_ROLE'] in openid_connect.user_getfield('resource_access')['tracker']['roles']
+
         return hasattr(current_user, 'role') and current_user.role == "ADMIN"
 
     def inaccessible_callback(self, name, **kwargs):
+        if openid_connect.user_loggedin:
+            return redirect(url_for('page.home'))
+
         return redirect(url_for('page.home', next=request.url))
 
 
 class AdminQueryView(sqla.ModelView):
 
     def is_accessible(self):
+        if openid_connect.user_loggedin:
+            return current_app.config['KEYCLOAK_ADMIN_ROLE'] in openid_connect.user_getfield('resource_access')['tracker']['roles']
+
         return hasattr(current_user, 'role') and current_user.role == "ADMIN"
 
     def inaccessible_callback(self, name, **kwargs):
+        if openid_connect.user_loggedin:
+            return redirect(url_for('page.home'))
+
         return redirect(url_for('page.home', next=request.url))
 
 
 @tracker_admin.route('/admin_query/<int:pk>/')
-# @login_required
 @openid_connect.require_login
 def admin_query(pk):
     keys, result, query_name = models.AdminQuery.results(pk)
@@ -41,11 +52,15 @@ def admin_query(pk):
         'data': result,
         'keys': keys,
     }
-    return render_template('tracker_admin/admin-query.html', **context)
+    return render_template(
+        'tracker_admin/admin-query.html',
+        **context,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
 
 
 @tracker_admin.route('/admin_query/<int:pk>/csv')
-# @login_required
 @openid_connect.require_login
 def admin_query_csv(pk):
     headings, rows, query_name = models.AdminQuery.results(pk)
@@ -61,7 +76,6 @@ def admin_query_csv(pk):
 
 
 @tracker_admin.route('/statistics/')
-# @login_required
 @openid_connect.require_login
 def admin_query_list_statistic():
     engine = db.get_engine(current_app)
@@ -79,11 +93,15 @@ def admin_query_list_statistic():
         'data': aqs,
         'title': 'Statistics'
     }
-    return render_template('tracker_admin/admin-query-list.html', **context)
+    return render_template(
+        'tracker_admin/admin-query-list.html',
+        **context,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
 
 
 @tracker_admin.route('/diagnostics/')
-# @login_required
 @openid_connect.require_login
 def admin_query_list_diagnostic():
     engine = db.get_engine(current_app)
@@ -101,4 +119,9 @@ def admin_query_list_diagnostic():
         'data': aqs,
         'title': 'Diagnostics'
     }
-    return render_template('tracker_admin/admin-query-list.html', **context)
+    return render_template(
+        'tracker_admin/admin-query-list.html',
+        **context,
+        openid_connect=openid_connect,
+        current_app=current_app
+    )
