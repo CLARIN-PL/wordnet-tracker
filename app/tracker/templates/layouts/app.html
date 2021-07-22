@@ -18,8 +18,8 @@
         <ul class="nav navbar-top-links navbar-right">
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                    <i class="fa fa-user fa-fw"></i>EDIT current_user.fullname
-                    EDIT current_user.role <i class="fa fa-caret-down"></i>
+                    <i class="fa fa-user fa-fw"></i>{{ openid_connect.user_getfield('name') }}
+                    ({{ openid_connect.user_getfield('resource_access')['tracker']['roles']|join(', ') }}) <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-user">
                     <li><a href="{{ url_for('user.profile') }}"><i class="fa fa-user fa-fw"></i> User Profile</a></li>
@@ -47,9 +47,19 @@
 
                         <!-- /input-group -->
                     </li>
-                    {% if current_user.role == 'ADMIN' %}
+                    {% if current_app.config['KEYCLOAK_ADMIN_ROLE'] in openid_connect.user_getfield('resource_access')[current_app.config['KEYCLOAK_CLIENT_ID']]['roles'] %}
                         <li>
-                            <a href="{{ url_for('admin.index') }}"><i class="fa fa-user fa-fw"></i> Admin Panel</a>
+                            <a href="#"><i class="fa fa-user fa-fw"></i> Admin Panel</a>
+                            <ul class="nav nav-second-level">
+                                <li>
+                                    <a href="{{ url_for('admin.index') }}">Admin Index</a>
+                                </li>
+                                {% if current_app.config["DEBUG"] %}
+                                    <li>
+                                        <a href="{{ url_for('keycloak_debug.home') }}">Keycloak DEBUG</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
                         </li>
                     {% endif %}
                     <li>

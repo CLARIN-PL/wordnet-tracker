@@ -22,15 +22,15 @@
                                 {% if user is not none %}
                                     <tr>
                                         <td class="col-sm-3 text-right">Email</td>
-                                        <td>{{ user.email }}</td>
+                                        <td>{{ openid_connect.user_getfield('email') }}</td>
                                     </tr>
                                     <tr>
                                         <td class="text-right">Full Name</td>
-                                        <td>{{ user.fullname() }}</td>
+                                        <td>{{ openid_connect.user_getfield('name') }}</td>
                                     </tr>
                                     <tr>
                                         <td class="text-right">Role</td>
-                                        <td>{{ user.role }}</td>
+                                        <td>{{ openid_connect.user_getfield('resource_access')['tracker']['roles']|join(', ') }}</td>
                                     </tr>
                                 {% endif %}
                                 </tbody>
@@ -98,7 +98,7 @@
                         <i class="fa fa-bar-chart-o fa-fw"></i> Today's User Activity
                     </div>
                     <div class="panel-body">
-                        <div class=row">
+                        <div class="row">
                             <h5 id="d_ylabel-axis" class="rotate">Number of operations</h5>
                             <div class="col-sm-12 text-center">
                                 <div id="user-activity-today" user-data="{{ request.args.get('q', '') }}"></div>
@@ -121,7 +121,7 @@
                         <i class="fa fa-bar-chart-o fa-fw"></i> Monthly User Activity
                     </div>
                     <div class="panel-body">
-                        <div class=row">
+                        <div class="row">
                             <h5 id="m_ylabel-axis" class="rotate">Number of operations</h5>
                             <div class="col-sm-12 text-center">
                                 <div id="user-activity-monthly" user-data="{{ request.args.get('q', '') }}"></div>
