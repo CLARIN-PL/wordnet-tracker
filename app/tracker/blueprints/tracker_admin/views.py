@@ -1,5 +1,5 @@
 import flask_admin
-from flask import url_for, request, current_app, render_template, abort, make_response, Blueprint
+from flask import url_for, request, current_app, render_template, make_response, Blueprint
 from flask_admin.contrib import sqla
 from flask_login import current_user
 from sqlalchemy import select
