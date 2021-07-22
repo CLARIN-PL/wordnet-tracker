@@ -27,6 +27,7 @@ blueprints_to_import = [
     "sense",
     "emotion",
     "user",
+    "keycloak_debug"
 ]
 
 
