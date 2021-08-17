@@ -46,28 +46,40 @@ def profile():
 @user.route('/users/page/<int:page>')
 @openid_connect.require_login
 def users(page):
+    q = request.args.get('q', None)
+    sort = request.args.get('sort', None)
+    order = request.args.get('order', None)
+    keycloak = KeycloakServiceClient()
+    realm_users = keycloak.get_realm_users()
+
+    if realm_users is not None:
+        if q is not None:
+            realm_users = [
+                RealmUser(user_repr, op_service_client=keycloak)
+                for user_repr in realm_users
+                if value_present(q, user_repr)
+            ]
+        else:
+            realm_users = [
+                RealmUser(user_repr, op_service_client=keycloak)
+                for user_repr in realm_users
+            ]
+
+        if sort is not None and order is not None:
+            sort_by_attr(realm_users, attribute=sort, order_arg=order)
+
+    paginator = Paginator(realm_users, in_page=30, page=page)
+    users = paginator.get_page(page)
+
     search_form = SearchForm()
-
-    sort_by = User.sort_by(request.args.get('sort', 'id'),
-                           request.args.get('direction', 'desc'))
-
-    order_values = '{0} {1}'.format(sort_by[0], sort_by[1])
-
-    arg = request.args.get('q', '')
-    if arg == '':
-        paginated_users = User.query.paginate(page, 50, True)
-    else:
-        paginated_users = User.query \
-            .filter(User.search(request.args.get('q', ''))) \
-            .order_by(User.role.asc(), text(order_values)) \
-            .paginate(page, 50, True)
 
     return render_template(
         'user/users.html',
         form=search_form,
-        users=paginated_users,
+        paginator=paginator,
+        users=users,
         openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=keycloak
     )
 
 

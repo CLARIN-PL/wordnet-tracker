@@ -1,7 +1,7 @@
 {# Toggle sorting order on a specific field. #}
 {% macro sort(field, title_header=None) -%}
   {% set sort = request.args.get('sort', None) %}
-  {% set direction = request.args.get('direction', 'asc') %}
+  {% set order = request.args.get('order', 'asc') %}
   {% set q = request.args.get('q', '') %}
 
   {% if title_header == None %}
@@ -10,14 +10,14 @@
     {% set label = title_header %}
   {% endif %}
 
-  {% if sort == field and direction == 'asc' %}
-    {% set direction = 'desc' %}
+  {% if sort == field and order == 'asc' %}
+    {% set order = 'desc' %}
   {% else %}
-    {% set direction = 'asc' %}
+    {% set order = 'asc' %}
   {% endif %}
 
   {% if sort == field %}
-    {% set css = direction %}
+    {% set css = order %}
   {% else %}
     {% set css = 'sort' %}
   {% endif %}
@@ -25,7 +25,7 @@
   <a class="{{ css }}" href="{{ url_for(request.endpoint,
                                         q=q,
                                         sort=field,
-                                        direction=direction,
+                                        order=order,
                                         **request.view_args) }}">{{ label }}</a>
 {%- endmacro %}
 
@@ -36,14 +36,22 @@
 
   <ul class="pagination">
     <li class="{{ 'disabled' if resource.page == 1 }}">
-      <a href="{{ url_for(request.endpoint, page=1, **args) }}"
-          aria-label="First">
+      {% if resource.page == 1 %}
+        <a aria-label="First">
+      {% else %}
+        <a href="{{ url_for(request.endpoint, page=1, **args) }}"
+            aria-label="First">
+      {% endif %}
         &laquo; First
       </a>
     </li>
     <li class="{{ 'disabled' if not resource.has_prev }}">
-      <a href="{{ url_for(request.endpoint, page=resource.page - 1, **args) }}"
-          aria-label="Previous">
+      {% if not resource.has_prev %}
+        <a aria-label="Previous">
+      {% else %}
+        <a href="{{ url_for(request.endpoint, page=resource.page - 1, **args) }}"
+            aria-label="Previous">
+      {% endif %}
         Prev
       </a>
     </li>
@@ -61,14 +69,22 @@
     </li>
   {%- endfor %}
     <li class="{{ 'disabled' if not resource.has_next }}">
-      <a href="{{ url_for(request.endpoint, page=resource.page + 1, **args) }}"
-          aria-label="Next">
+      {% if not resource.has_next %}
+        <a aria-label="Next">
+      {% else %}
+        <a href="{{ url_for(request.endpoint, page=resource.page + 1, **args) }}"
+            aria-label="Next">
+      {% endif %}
         Next
       </a>
     </li>
     <li class="{{ 'disabled' if resource.page == resource.pages }}">
+    {% if resource.page == resource.pages %}
+      <a aria-label="Last">
+    {% else %}
       <a href="{{ url_for(request.endpoint, page=resource.pages, **args) }}"
           aria-label="Last">
+    {% endif %}
         Last &raquo;
       </a>
     </li>
