@@ -22,16 +22,16 @@
                                 {% if user %}
                                     <tr>
                                         <td class="col-sm-3 text-right">Email</td>
-                                        <td>{{ current_user.get_email() if not request.args.get('user_id', None) else user.get_email() }}</td>
+                                        <td>{{ current_user.get_email() if not request.args.get('user_id', None) else user.email }}</td>
                                     </tr>
                                     <tr>
                                         <td class="text-right">Full Name</td>
-                                        <td>{{ current_user.get_fullname() if not request.args.get('user_id', None) else user.get_fullname() }}</td>
+                                        <td>{{ current_user.get_fullname() if not request.args.get('user_id', None) else user.fullname }}</td>
                                     </tr>
                                     <tr>
                                         <td class="text-right">Role</td>
                                         <td>{{ ( current_user.get_role() if not request.args.get('user_id', None) else
-                                                keycloak.get_client_role_by_id(user.id) )|default('-', true) }}</td>
+                                                user.role|default('-', true) ) }}</td>
                                     </tr>
                                 {% endif %}
                                 </tbody>

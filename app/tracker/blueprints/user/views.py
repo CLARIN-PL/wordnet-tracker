@@ -25,7 +25,7 @@ def profile():
     if user_id is not None:
         user_repr = keycloak.get_user_by_id(user_id)
         if user_repr is not None:
-            user = RealmUser(user_repr)
+            user = RealmUser(user_repr, op_service_client=keycloak)
         else:
             user = None
     else:
