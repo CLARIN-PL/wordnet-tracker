@@ -385,39 +385,52 @@ class KeycloakServiceClient:
         return False
 
 
-    def get_auth_token(self):
+class Paginator:
+    """Representation of paginated iterable object."""
+
+    def __init__(self, items: Iterable, in_page: int, page=1) -> None:
+        self.items = items
+        self.in_page = in_page
+        self.page = page
+        self.pages: int = ceil(len(items) / in_page)
+        self.has_prev: bool = self._has_prev()
+        self.has_next: bool = self._has_next()
+
+    def iter_pages(self) -> int:
+        """Iterate over page numbers."""
+        for page_num in range(1, self.pages + 1):
+            yield page_num
+
+    def get_page(self, num: int) -> Union[Iterable, None]:
+        """Get page with specified number.
+
+        Args:
+            num (int): Number of the page.
+
+        Returns:
+            Union[Iterable, None]: Slice of given iterable object basing on
+            numbers of items in the page, None if items does not exist.
         """
-        Return the user's auth token. Use their password as part of the token
-        because if the user changes their password we will want to invalidate
-        all of their logins across devices. It is completely fine to use
-        md5 here as nothing leaks.
+        if not self.items:
+            return None
 
-        This satisfies Flask-Login by providing a means to create a token.
+        start = (num - 1) * self.in_page
+        end = num * self.in_page
+        return self.items[start:end]
 
-        :return: str
-        """
-        private_key = current_app.config['SECRET_KEY']
+    def _has_prev(self) -> bool:
+        """Determines whether the paginator's previous page exists."""
+        if 1 < self.page <= self.pages:
+            return True
+        return False
 
-        serializer = URLSafeTimedSerializer(private_key)
-        data = [str(self.id), md5(self.password.encode('utf-8')).hexdigest()]
-
-        return serializer.dumps(data)
-
-    def authenticated(self, with_password=True, password=''):
-        """
-        Ensure a user is authenticated, and optionally check their password.
-
-        :param with_password: Optionally check their password
-        :type with_password: bool
-        :param password: Optionally verify this as their password
-        :type password: str
-        :return: bool
-        """
-
-        if with_password:
-            return self.password == self.encrypt_password(password)
-
+    def _has_next(self) -> bool:
+        """Determines whether the paginator's next page exists."""
+        if self.page < self.pages:
         return True
+        return False
+
+
 
     def serialize_token(self, expiration=3600):
         """
