@@ -1,45 +1,36 @@
-import flask_admin
-from flask import url_for, request, current_app, render_template, make_response, Blueprint
+from flask import (
+    current_app, render_template, make_response, Blueprint, request, url_for
+)
+
+from flask_admin import AdminIndexView
 from flask_admin.contrib import sqla
-from flask_login import current_user
 from sqlalchemy import select
 from werkzeug.utils import redirect
 
 from tracker.blueprints.tracker_admin import models
+from tracker.blueprints.user.models import KeycloakServiceClient, CurrentUser
 from tracker.extensions import db, openid_connect
 from urllib.parse import quote
 
 tracker_admin = Blueprint('tracker_admin', __name__, template_folder='templates')
 
 
-class AdminIndexView(flask_admin.AdminIndexView):
+class CustomAdminIndexView(AdminIndexView):
 
     def is_accessible(self):
-        if openid_connect.user_loggedin:
-            return current_app.config['KEYCLOAK_ADMIN_ROLE'] in openid_connect.user_getfield('resource_access')['tracker']['roles']
-
-        return hasattr(current_user, 'role') and current_user.role == "ADMIN"
+        return CurrentUser().is_admin()
 
     def inaccessible_callback(self, name, **kwargs):
-        if openid_connect.user_loggedin:
-            return redirect(url_for('page.home'))
-
-        return redirect(url_for('page.home', next=request.url))
+        return redirect(url_for('page.home'))
 
 
 class AdminQueryView(sqla.ModelView):
 
     def is_accessible(self):
-        if openid_connect.user_loggedin:
-            return current_app.config['KEYCLOAK_ADMIN_ROLE'] in openid_connect.user_getfield('resource_access')['tracker']['roles']
-
-        return hasattr(current_user, 'role') and current_user.role == "ADMIN"
+        return CurrentUser().is_admin()
 
     def inaccessible_callback(self, name, **kwargs):
-        if openid_connect.user_loggedin:
-            return redirect(url_for('page.home'))
-
-        return redirect(url_for('page.home', next=request.url))
+        return redirect(url_for('page.home'))
 
 
 @tracker_admin.route('/admin_query/<int:pk>/')
@@ -51,12 +42,11 @@ def admin_query(pk):
         'pk': pk,
         'data': result,
         'keys': keys,
+        'keycloak': KeycloakServiceClient
     }
     return render_template(
         'tracker_admin/admin-query.html',
         **context,
-        openid_connect=openid_connect,
-        current_app=current_app
     )
 
 
@@ -89,15 +79,16 @@ def admin_query_list_statistic():
         aqs = [{key: value for (key, value) in o.items()} for o in aqs]
     else:
         aqs = []
+
     context = {
         'data': aqs,
-        'title': 'Statistics'
+        'title': 'Statistics',
+        'keycloak': KeycloakServiceClient
     }
+
     return render_template(
         'tracker_admin/admin-query-list.html',
-        **context,
-        openid_connect=openid_connect,
-        current_app=current_app
+        **context
     )
 
 
@@ -115,13 +106,14 @@ def admin_query_list_diagnostic():
         aqs = [{key: value for (key, value) in o.items()} for o in aqs]
     else:
         aqs = []
+
     context = {
         'data': aqs,
-        'title': 'Diagnostics'
+        'title': 'Diagnostics',
+        'keycloak': KeycloakServiceClient
     }
+
     return render_template(
         'tracker_admin/admin-query-list.html',
         **context,
-        openid_connect=openid_connect,
-        current_app=current_app
     )
