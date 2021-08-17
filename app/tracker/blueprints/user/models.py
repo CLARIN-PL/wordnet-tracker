@@ -300,7 +300,7 @@ class KeycloakServiceClient:
             if user_client_roles:
                 return user_client_roles[0]['name']
 
-            return None
+        return None
 
     def get_service_access_token(self) -> Union[str, None]:
         """Get service access token.
@@ -381,7 +381,7 @@ class KeycloakServiceClient:
         """
         if hasattr(response, 'status'):
             if 200 <= response.status <= 299:
-        return True
+                return True
         return False
 
 
@@ -427,21 +427,49 @@ class Paginator:
     def _has_next(self) -> bool:
         """Determines whether the paginator's next page exists."""
         if self.page < self.pages:
-        return True
+            return True
         return False
 
 
+class RealmUser:
+    """Realm user object based on OP's user representation in dict type."""
 
-    def serialize_token(self, expiration=3600):
-        """
-        Sign and create a token that can be used for things such as resetting
-        a password or other tasks that involve a one off token.
+    def __init__(self, user_representation: Dict[str, Any],
+                 op_service_client=None) -> None:
+        self.user_representation = user_representation
+        try:
+            self.id = self.user_representation['id']
+            self.email = self.user_representation['email']
+            self.firstname = self.user_representation['firstName']
+            self.lastname = self.user_representation['lastName']
+            self.fullname = self._get_fullname()
+            self.op_service_client = op_service_client
+            self.role = self._get_client_role()
+        except Exception:
+            current_app.logger.error(
+                'Incomplete user representation. `%s` object creation failed!',
+                self.__class__.__name__,
+                exc_info=1
+            )
 
-        :param expiration: Seconds until it expires, defaults to 1 hour
-        :type expiration: int
-        :return: JSON
-        """
-        private_key = current_app.config['SECRET_KEY']
+    @property
+    def get_email(self) -> str:
+        return self.email
 
-        serializer = TimedJSONWebSignatureSerializer(private_key, expiration)
-        return serializer.dumps({'user_email': self.email}).decode('utf-8')
+    @property
+    def get_firstname(self) -> str:
+        return self.firstname
+
+    @property
+    def get_lastname(self) -> str:
+        return self.lastname
+
+    def _get_fullname(self) -> str:
+        return ' '.join([self.firstname, self.lastname])
+
+    def _get_client_role(self) -> str:
+        if self.op_service_client is None or \
+                not isinstance(self.op_service_client, KeycloakServiceClient):
+            return None
+
+        return self.op_service_client.get_client_role_by_id(self.id)
