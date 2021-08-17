@@ -19,18 +19,19 @@
                         <div class="table-responsive">
                             <table class="table table-striped">
                                 <tbody>
-                                {% if user is not none %}
+                                {% if user %}
                                     <tr>
                                         <td class="col-sm-3 text-right">Email</td>
-                                        <td>{{ openid_connect.user_getfield('email') }}</td>
+                                        <td>{{ current_user.get_email() if not request.args.get('user_id', None) else user.get_email() }}</td>
                                     </tr>
                                     <tr>
                                         <td class="text-right">Full Name</td>
-                                        <td>{{ openid_connect.user_getfield('name') }}</td>
+                                        <td>{{ current_user.get_fullname() if not request.args.get('user_id', None) else user.get_fullname() }}</td>
                                     </tr>
                                     <tr>
                                         <td class="text-right">Role</td>
-                                        <td>{{ openid_connect.user_getfield('resource_access')['tracker']['roles']|join(', ') }}</td>
+                                        <td>{{ ( current_user.get_role() if not request.args.get('user_id', None) else
+                                                keycloak.get_client_role_by_id(user.id) )|default('-', true) }}</td>
                                     </tr>
                                 {% endif %}
                                 </tbody>
@@ -101,7 +102,7 @@
                         <div class="row">
                             <h5 id="d_ylabel-axis" class="rotate">Number of operations</h5>
                             <div class="col-sm-12 text-center">
-                                <div id="user-activity-today" user-data="{{ request.args.get('q', '') }}"></div>
+                                <div id="user-activity-today" user-data="{{ request.args.get('q', current_user.get_fullname()) }}"></div>
                                 <h5 id="d_xlabel-axis">Hour</h5>
                                 <div id="no-user-activity"><h4>No user activity found</h4></div>
                                 <img id="user-activity-today-spinner"
@@ -124,7 +125,7 @@
                         <div class="row">
                             <h5 id="m_ylabel-axis" class="rotate">Number of operations</h5>
                             <div class="col-sm-12 text-center">
-                                <div id="user-activity-monthly" user-data="{{ request.args.get('q', '') }}"></div>
+                                <div id="user-activity-monthly" user-data="{{ request.args.get('q', current_user.get_fullname()) }}"></div>
                                 <h5 id="m_xlabel-axis">Day</h5>
                                 <div id="m_no-user-activity"><h4>No user activity found</h4></div>
                                 <img id="user-activity-monthly-spinner"

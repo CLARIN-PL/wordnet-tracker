@@ -13,68 +13,32 @@ from utils import value_present, sort_by_attr
 user = Blueprint('user', __name__, template_folder='templates')
 
 
-@user.route('/login', methods=['GET', 'POST'])
-@anonymous_required()
-def login():
-    form = LoginForm()
-
-    if form.validate_on_submit():
-        u = User.find_by_email(request.form.get('identity'))
-
-        if u and u.authenticated(password=request.form.get('password')):
-            # As you can see remember me is always enabled, this was a design
-            # decision I made because more often than not users want this
-            # enabled. This allows for a less complicated login form.
-            #
-            # If however you want them to be able to select whether or not they
-            # should remain logged in then perform the following 3 steps:
-            # 1) Replace 'True' below with: request.form.get('remember', False)
-            # 2) Uncomment the 'remember' field in user/forms.py#LoginForm
-            # 3) Add a checkbox to the login form with the id/name 'remember'
-            if login_user(u, remember=True) and u.is_active():
-                return redirect(url_for('page.home'))
-            else:
-                flash('This account has been disabled.', 'error')
-        else:
-            flash('Identity or password is incorrect.', 'error')
-
-    return render_template(
-        'user/login.html',
-        form=form
-    )
-
-
 @user.route('/profile')
 @openid_connect.require_login
 def profile():
-    q = request.args.get('q', '')
-    u = current_user
+    keycloak = KeycloakServiceClient()
+    current_user = CurrentUser()
 
-    if q != '':
-        if "." in q:
-            fullname = q.split(".")
+    q = request.args.get('q', current_user.get_fullname())
+    user_id = request.args.get('user_id', None)
+
+    if user_id is not None:
+        user_repr = keycloak.get_user_by_id(user_id)
+        if user_repr is not None:
+            user = RealmUser(user_repr)
         else:
-            fullname = q.split()
-
-        first_name = ""
-        last_name = ""
-
-        if len(fullname) > 0:
-            first_name = fullname[0]
-            if len(fullname) > 1:
-                last_name = fullname[1]
-
-        u = User.find_by_fullname(first_name, last_name)
+            user = None
+    else:
+        user = current_user
 
     results = user_activity_month(strftime("%Y", gmtime()), strftime("%m", gmtime()), q)
-    items, total = calculate_stats(results)
+    items, _ = calculate_stats(results)
 
     return render_template(
         'user/profile.html',
-        user=u,
         stats=items,
-        openid_connect=openid_connect,
-        current_app=current_app
+        user=user,
+        keycloak=KeycloakServiceClient()
     )
 
 
