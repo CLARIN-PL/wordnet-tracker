@@ -1,15 +1,13 @@
 from time import gmtime, strftime
-
-from flask import Blueprint, redirect, request, flash, url_for, render_template, make_response, current_app
-
-from flask_login import login_user, logout_user, current_user
-from sqlalchemy import text
-
-from tracker.blueprints.user.decorator import anonymous_required
-from tracker.blueprints.user.forms import LoginForm, SearchForm, UserActivityForm
-from tracker.blueprints.user.models import User, user_activity_day, user_activity_between_dates, user_activity_month
+from flask import Blueprint, redirect, request, url_for, render_template
+from tracker.blueprints.user.forms import SearchForm, UserActivityForm
+from tracker.blueprints.user.models import (
+    CurrentUser, KeycloakServiceClient, Paginator, RealmUser,
+    user_activity_day, user_activity_between_dates, user_activity_month
+)
 
 from tracker.extensions import openid_connect
+from utils import value_present, sort_by_attr
 
 
 user = Blueprint('user', __name__, template_folder='templates')
