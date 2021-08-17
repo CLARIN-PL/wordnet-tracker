@@ -1,16 +1,16 @@
-import base64
-import hashlib
-from collections import OrderedDict
-from hashlib import md5
-
+import json
+from math import ceil
 from flask import current_app
-from sqlalchemy import or_, text, and_
-from flask_login import UserMixin
+from sqlalchemy import text
+from six.moves.urllib.parse import urlencode
+from httplib2 import Http
+from typing import Any, List, Dict, Iterable, Union
 
-from itsdangerous import URLSafeTimedSerializer, \
-    TimedJSONWebSignatureSerializer
-
-from tracker.extensions import db
+from tracker.extensions import db, openid_connect
+from config.settings import client_secrets
+from config.kc_admin_endpoints import (
+    VIEW_USERS_URI, USER_CLIENT_ROLES_URI, VIEW_CLIENTS_URI
+)
 
 
 def user_activity_between_dates(from_date, to_date):
