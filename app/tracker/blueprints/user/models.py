@@ -194,93 +194,196 @@ class CurrentUser:
         else:
             current_app.logger.warning('Logging out failed!')
 
-        """
-        Hash a plaintext string using SHA-256 with base64 encoding.
 
-        :param plaintext_password: Password in plain text
-        :type plaintext_password: str
-        :return: str
+class KeycloakServiceClient:
+    """App service account client."""
+
+    def __init__(self) -> None:
+        self.service_access_token = self.get_service_access_token()
+        self.bearer_auth_header = {
+            'Authorization': f'Bearer {self.service_access_token}'
+        }
+        self.client_uuid = self.get_client_uuid()
+
+        if self.service_access_token is None:
+            current_app.logger.error(
+                'Missing access token in `%s` object', self.__class__.__name__
+            )
+
+        if self.client_uuid is None:
+            current_app.logger.error(
+                'Missing client uuid in `%s` object', self.__class__.__name__
+            )
+
+    def get_realm_users(self) -> List[Dict[str, Any]]:
+        """Get list of all realm users.
+
+        Receive list of realm user representations from OP's view users
+        endpoint GET request.
+
+        Returns:
+            List[Dict[str, Any]]: List of realm user representations,
+            empty list if response is unsuccessful.
         """
-        if plaintext_password:
-            hash_object = hashlib.sha256(plaintext_password.encode())
-            hex_dig = hash_object.digest()
-            return base64.b64encode(hex_dig).decode()
+        uri = VIEW_USERS_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME'],
+        )
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            realm_users = json.loads(content.decode('utf-8'))
+            return realm_users
+
+        return []
+
+    def get_client_uuid(self) -> Union[str, None]:
+        """Get client_uuid (not clientId!)
+
+        Parse client UUID from client representation received from OP's view
+        clients endpoint GET request.
+
+        Returns:
+            Union[str, None]: Client UUID, None if response is unsuccessful.
+        """
+        uri = VIEW_CLIENTS_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME']
+        ) + f"?clientId={current_app.config['KEYCLOAK_CLIENT_ID']}"
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            client_representation = json.loads(content.decode('utf-8'))
+            if 'id' in client_representation[0].keys():
+                client_uuid = client_representation[0]['id']
+                return client_uuid
 
         return None
 
-    @classmethod
-    def deserialize_token(cls, token):
-        """
-        Obtain a user from de-serializing a signed token.
+    def get_client_role_by_id(self, user_id) -> Union[str, None]:
+        """Get user's client role by id.
 
-        :param token: Signed token.
-        :type token: str
-        :return: User instance or None
-        """
-        private_key = TimedJSONWebSignatureSerializer(
-            current_app.config['SECRET_KEY'])
-        try:
-            decoded_payload = private_key.loads(token)
+        Parse name of the first client role from OP's clients role-mappings
+        endpoint GET request.
 
-            return User.find_by_identity(decoded_payload.get('user_email'))
-        except Exception:
+        Returns:
+            Union[str, None]: Client UUID, None if response is unsuccessful.
+        """
+        uri = USER_CLIENT_ROLES_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME'],
+            user_id=user_id,
+            client_uuid=self.client_uuid
+        )
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            user_client_roles = json.loads(content.decode('utf-8'))
+            if user_client_roles:
+                return user_client_roles[0]['name']
+
             return None
 
-    @classmethod
-    def search(cls, query):
+    def get_service_access_token(self) -> Union[str, None]:
+        """Get service access token.
+
+        Receive access token from OP's access token endpoint POST request using
+        client credentials granty type.
+
+        Returns:
+            Union[str, None]: Access token, None if response is unsuccessful.
         """
-        Search a resource by 1 or more fields.
+        body_dict = {
+            'grant_type': 'client_credentials',
+            'client_id': current_app.config['KEYCLOAK_CLIENT_ID'],
+            'client_secret': current_app.config['KEYCLOAK_CLIENT_SECRET']
+        }
 
-        :param query: Search query
-        :type query: str
-        :return: SQLAlchemy filter
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+
+        response, content = Http().request(
+            uri=client_secrets['web']['token_uri'],
+            method='POST',
+            headers=headers,
+            body=urlencode(body_dict)
+        )
+
+        if self._successful_response(response):
+            service_token = json.loads(content.decode('utf-8'))
+            return service_token['access_token']
+
+        return None
+
+    def get_user_by_id(self, user_id) -> Union[Dict[str, Any], None]:
+        """Get realm user representation by id.
+
+        Receive realm user representation from OP's view users endpoint GET
+        request by specified [user_id] as url parameter.
+
+        Returns:
+            Union[Dict[str, Any], None]: User representation, None if response
+            is unsuccessful.
         """
-        if not query or query == '':
-            return ''
+        uri = VIEW_USERS_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME'],
+        ) + f'/{user_id}'
 
-        search_query = f'%{query}%'
-        search_chain = (User.email.ilike(search_query),
-                        User.first_name.ilike(search_query),
-                        User.last_name.ilike(search_query),
-                        User.id.ilike(search_query),
-                        User.role.ilike(search_query))
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
 
-        return or_(*search_chain)
+        if self._successful_response(response):
+            user_representation = json.loads(content.decode('utf-8'))
+            return user_representation
 
-    @classmethod
-    def sort_by(cls, field, direction):
+        return None
+
+    def is_admin(self, user_id) -> bool:
+        """Determines whether the user with specified [user_id] is an admin.
+
+        Checks if user's role matches admin role specified in configuration.
         """
-        Validate the sort field and direction.
+        user_role = self.get_client_role_by_id(user_id)
+        return user_role == current_app.config['KEYCLOAK_ADMIN_ROLE']
 
-        :param field: Field name
-        :type field: str
-        :param direction: Direction
-        :type direction: str
-        :return: tuple
+    def _successful_response(self, response) -> bool:
+        """Determines whether the response is successful.
+
+        Args:
+            response (Response): Any response object with status attribute.
+
+        Returns:
+            bool: True if response status is 2XX, False otherwise.
         """
-        if field not in cls.__table__.columns:
-            field = 'id'
-
-        if direction not in ('asc', 'desc'):
-            direction = 'asc'
-
-        return field, direction
-
-    def fullname(self):
-        """
-        Get user fullname
-        :return: str
-        """
-        return self.first_name + " " + self.last_name
-
-    def is_active(self):
-        """
-        Return whether or not the user account is active, this satisfies
-        Flask-Login by overwriting the default value.
-
-        :return: bool
-        """
+        if hasattr(response, 'status'):
+            if 200 <= response.status <= 299:
         return True
+        return False
+
 
     def get_auth_token(self):
         """
