@@ -1,0 +1,17 @@
+<App-client>:
+    Consent Required -> ON
+    Access Type -> confidential
+    Service Accounts Enabled -> ON
+    Authorization Enabled -> ON
+    Credentials:
+        -> Client Authenticator
+            -> Client Id and Secret
+    Mappers:
+        + client roles:
+            Client ID -> <App-client-ID>
+            Add to ID Token -> ON
+    Service Account Roles:
+        -> Client Roles
+            -> realm-management
+                -> Assigned Roles
+                    -> view-users, view-clients
