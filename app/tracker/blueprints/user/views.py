@@ -85,17 +85,8 @@ def users(page):
 
 @user.route("/logout")
 def logout():
-    if openid_connect.user_loggedin:
-        resp = make_response()
-        # resp.set_cookie('oidc_id_token', '', expires=0)
-        resp.delete_cookie('oidc_id_token')
-        # openid_connect.logout()
-
-        return redirect(url_for('page.home'))
-
-    logout_user()
-    flash('You have been logged out.', 'success')
-    return redirect(url_for('user.login'))
+    CurrentUser().logout()
+    return redirect(url_for('page.home'))
 
 
 @user.route('/users/activity')
@@ -116,8 +107,7 @@ def users_activity():
         form=search_from,
         stats=items,
         total=total,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )
 
 
