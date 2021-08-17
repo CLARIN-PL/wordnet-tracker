@@ -4,7 +4,7 @@ import json
 from datetime import timedelta
 
 # FLASK
-DEBUG = False  # celery workers may not work correctly if DEBUG=True, possible conflict with flask reloader
+DEBUG = False
 DEBUG_TB_ENABLED = False
 DEBUG_TB_HOSTS = 'localhost'
 DEBUG_TB_INTERCEPT_REDIRECTS = False
@@ -25,14 +25,17 @@ KEYCLOAK_ADDRESS = os.environ.get('KEYCLOAK_ADDRESS')
 KEYCLOAK_SERVER_PORT = os.environ.get('KEYCLOAK_SERVER_PORT')
 KEYCLOAK_REALM_NAME = os.environ.get('KEYCLOAK_REALM_NAME')
 KEYCLOAK_CLIENT_ID = os.environ.get('KEYCLOAK_CLIENT_ID')
+KEYCLOAK_CLIENT_SECRET = os.environ.get('KEYCLOAK_CLIENT_SECRET')
 KEYCLOAK_ADMIN_ROLE = os.environ.get('KEYCLOAK_ADMIN_ROLE')
+
+KEYCLOAK_LOGOUT_URI = f'{WWW_PROTOCOL}://{KEYCLOAK_ADDRESS}:{KEYCLOAK_SERVER_PORT}/auth/realms/{KEYCLOAK_REALM_NAME}/protocol/openid-connect/logout'
 
 # Flask-OIDC
 client_secrets = {
     "web": {
         "auth_uri": f"{WWW_PROTOCOL}://{SERVER_ADDRESS}:{KEYCLOAK_SERVER_PORT}/auth/realms/{KEYCLOAK_REALM_NAME}/protocol/openid-connect/auth",
         "client_id": KEYCLOAK_CLIENT_ID,
-        "client_secret": SECRET_KEY,
+        "client_secret": KEYCLOAK_CLIENT_SECRET,
         "redirect_uris": [
             f"{WWW_PROTOCOL}://{SERVER_ADDRESS}:{SERVER_PORT}/oidc_callback"
         ],
@@ -63,17 +66,6 @@ SQLALCHEMY_DATABASE_URI = mysql_uri_template.format(**{
     'db_name': os.environ['MYSQL_DATABASE'],
     'charset': 'utf8',
 })
-
-SQLALCHEMY_BINDS = {
-    'users': mysql_uri_template.format(**{
-        'user': os.environ['MYSQL_USERNAME'],
-        'password': os.environ['MYSQL_PASSWORD'],
-        'host': os.environ['MYSQL_HOST'],
-        'port': os.environ['MYSQL_PORT'],
-        'db_name': os.environ['MYSQL_USERS_DATABASE'],
-        'charset': 'utf8',
-    })
-}
 
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ECHO = False

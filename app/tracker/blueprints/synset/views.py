@@ -1,15 +1,10 @@
-from flask import (
-    Blueprint,
-    render_template,
-    request,
-    current_app
-)
-
+from flask import Blueprint, render_template, request
 from lib.util_sqlalchemy import paginate, status, parts_of_speech
 from tracker.blueprints.synset.forms import SynsetHistoryForm, SynsetRelationsHistoryForm
 from tracker.blueprints.synset.models import TrackerSynsetsHistory, get_user_name_list, \
     TrackerSynsetsRelationsHistory, get_synset_relation_list, Synset, find_synset_incoming_relations, \
     find_synset_outgoing_relations, find_synset_senses, find_synset_sense_history, find_synset_history
+from tracker.blueprints.user.models import KeycloakServiceClient
 from tracker.extensions import openid_connect
 
 
@@ -27,8 +22,7 @@ def synsets(page):
     return render_template(
         'synset/synsets.html',
         synsets=paginated_users,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )
 
 
@@ -67,8 +61,7 @@ def synsets_relations_history(page):
         users=users,
         relations=relations,
         history=pagination,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )
 
 
@@ -102,8 +95,7 @@ def synsets_history(page):
         form=filter_form,
         users=users,
         synsets=pagination,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )
 
 
@@ -135,6 +127,5 @@ def synset_by_id(id):
         senses=senses,
         synset=synset,
         synset_history=synset_history,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )

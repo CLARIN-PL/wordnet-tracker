@@ -1,14 +1,9 @@
-from flask import (
-    Blueprint,
-    render_template,
-    request,
-    current_app
-)
-
+from flask import Blueprint, render_template, request
 from lib.util_sqlalchemy import paginate
 from tracker.blueprints.emotion.forms import EmotionDisagreementForm
 from tracker.blueprints.emotion.models import EmotionDisagreement
 from tracker.blueprints.synset.models import get_user_emotion_list
+from tracker.blueprints.user.models import KeycloakServiceClient
 from tracker.extensions import openid_connect
 
 emotion = Blueprint('emotion', __name__, template_folder='templates')
@@ -40,6 +35,5 @@ def annotator_disagreement(page):
         form=filter_form,
         users=users,
         emotions=pagination,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )

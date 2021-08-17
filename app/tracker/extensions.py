@@ -1,8 +1,8 @@
 import os
 
 from flask_debugtoolbar import DebugToolbarExtension
-from flask_login import LoginManager
 from flask_oidc import OpenIDConnect
+from sqlitedict import SqliteDict
 from flask_wtf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
@@ -13,8 +13,6 @@ from tracker.exceptions import ImproperlyConfigured
 debug_toolbar = DebugToolbarExtension()
 csrf = CSRFProtect()
 db = SQLAlchemy()
-login_manager = LoginManager()
-openid_connect = OpenIDConnect()
 limiter = Limiter(key_func=get_remote_address)
 
 cache_supported_backends = {
@@ -29,7 +27,7 @@ if __cache_uri:
     try:
         # example __cache_uri is 'redis:dev_redis_1:6379'
         [__cache_type, __url, __port] = __cache_uri.split(':')
-    except ValueError as e:
+    except ValueError:
         raise ImproperlyConfigured('CACHE_SERVICE is wrongly formatted. Use "redis:dev_redis_1:6379" as example.')
     if __cache_type == 'redis':
         cache = __cache_module.RedisCache(host=__url, port=__port, default_timeout=os.environ.get('CACHE_TIMEOUT'))
@@ -43,5 +41,5 @@ if __cache_uri:
 else:
     cache = __cache_module.NullCache
 
-
-
+credentials_store = SqliteDict('flask_oidc.db', autocommit=True)
+openid_connect = OpenIDConnect(credentials_store=credentials_store)

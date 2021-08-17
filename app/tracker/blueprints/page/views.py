@@ -1,10 +1,11 @@
 from calendar import monthrange
 from time import strftime, gmtime
 
-from flask import Blueprint, render_template, jsonify, request, current_app
+from flask import Blueprint, render_template, jsonify, request
 
 from tracker.blueprints.page.models import find_created_items_today, find_user_activity_month, \
     user_activity_cached
+from tracker.blueprints.user.models import KeycloakServiceClient
 from tracker.extensions import cache, openid_connect
 
 page = Blueprint('page', __name__, template_folder='templates')
@@ -24,8 +25,7 @@ def home():
     return render_template(
         'page/dashboard.html',
         stats=result,
-        openid_connect=openid_connect,
-        current_app=current_app
+        keycloak=KeycloakServiceClient()
     )
 
 
