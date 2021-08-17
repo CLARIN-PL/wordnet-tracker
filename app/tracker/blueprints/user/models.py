@@ -62,65 +62,138 @@ def user_activity_day(now_date):
     return db.engine.execute(sql, {'now_date': now_date})
 
 
-class User(UserMixin, db.Model):
-    ROLE = OrderedDict([
-        ('USER', 'User'),
-        ('ANONYMOUS', 'Anonymous'),
-        ('ADMIN', 'Administrator')
-    ])
-    __bind_key__ = 'users'
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
+class CurrentUser:
+    """Current user representation based on ID token."""
 
-    # Authentication.
-    role = db.Column(db.Enum(*ROLE, name='role', native_enum=False),
-                     index=True, nullable=False, server_default='USER')
+    def __init__(self) -> None:
+        self.resource_access = self._get_resource_access()
+        self.client_roles = self._get_client_roles()
 
-    first_name = db.Column('firstname', db.String(255), unique=False, index=True)
+    def get_role(self) -> Union[str, None]:
+        """Get first role of the user."""
+        client_roles = self.client_roles
+        if client_roles:
+            return client_roles[0]
+        return None
 
-    last_name = db.Column('lastname', db.String(255), unique=False, index=True)
+    def get_fullname(self) -> Union[str, None]:
+        """Get user's full name."""
+        try:
+            return openid_connect.user_getfield('name')
+        except Exception:
+            current_app.logger.warning("Missing current user's fullname!")
+            return None
 
-    email = db.Column(db.String(255), unique=True, index=True, nullable=False,
-                      server_default='')
+    def get_firstname(self) -> Union[str, None]:
+        """Get user's first name."""
+        try:
+            return openid_connect.user_getfield('given_name')
+        except Exception:
+            current_app.logger.warning("Missing current user's firstname!")
+            return None
 
-    password = db.Column(db.String(128), nullable=False, server_default='')
+    def get_lastname(self) -> Union[str, None]:
+        """Get user's last name."""
+        try:
+            return openid_connect.user_getfield('family_name')
+        except Exception:
+            current_app.logger.warning("Missing current user's lastname!")
+            return None
 
-    def __init__(self, **kwargs):
-        # Call Flask-SQLAlchemy's constructor.
-        super(User, self).__init__(**kwargs)
+    def get_email(self) -> Union[str, None]:
+        """Get user's email address."""
+        try:
+            return openid_connect.user_getfield('email')
+        except Exception:
+            current_app.logger.warning("Missing current user's email!")
+            return None
 
-        self.password = User.encrypt_password(kwargs.get('password', ''))
+    def is_admin(self) -> bool:
+        """Determines whether the user is an admin.
 
-    @classmethod
-    def find_by_email(cls, email):
+        Checks if user's roles contains admin role specified in configuration.
         """
-        Find a user by their e-mail.
+        admin_role = current_app.config['KEYCLOAK_ADMIN_ROLE']
+        return admin_role in self.client_roles
 
-        :param email: Email
-        :type email: str
-        :return: User instance
-        """
-        return User.query.filter(User.email == email).first()
+    def is_loggedin(self) -> bool:
+        """Checks if user logged in using Flask-OIDC build in method."""
+        return openid_connect.user_loggedin
 
-    @classmethod
-    def find_all(cls):
-        """
-        Find all users.
-        """
-        return User.query.all()
+    def logout(self):
+        """Logout the current user.
 
-    @classmethod
-    def find_by_fullname(cls, first_name, last_name):
+        Clears cookie ID token data and sending request on OP's endsession endpoint.
         """
-        Find a user by first name and last name.
-        :param first_name: User first name
-        :param last_name: User last name
-        :return: User instance
-        """
-        return User.query.filter(and_(User.first_name == first_name, User.last_name == last_name)).first()
+        if self.is_loggedin():
+            self._send_logout_request()
+            openid_connect.logout()
+        else:
+            current_app.logger.info(
+                'Unable to log out the user. Already logged out.'
+            )
 
-    @classmethod
-    def encrypt_password(cls, plaintext_password):
+    def _get_resource_access(self) -> Dict[str, Any]:
+        """Get access data from OP (OpenID Connect Provider).
+
+        Access data contains information such as client roles etc.
+
+        Returns:
+            Dict[str, Any]: Access data, None if an excepetion occured.
+        """
+        try:
+            return openid_connect.user_getfield('resource_access')
+        except Exception:
+            current_app.logger.error(
+                "ID token does not contain `resource_access` claim or user \
+                does not have any access granted!"
+            )
+            return None
+
+    def _get_client_roles(self) -> List[str]:
+        """Get user's roles linked to client ID specified in configuration.
+
+        Returns:
+            List[str]: User's roles if access data exists otherwise returns
+            empty list.
+        """
+        if self.resource_access:
+            client_id = current_app.config['KEYCLOAK_CLIENT_ID']
+            if client_id in self.resource_access.keys():
+                roles = self.resource_access[client_id]['roles']
+                if roles:
+                    return roles
+
+            current_app.logger.warning(
+                'Current user does not have any %s roles!', client_id
+            )
+
+        return []
+
+    def _send_logout_request(self):
+        """Send request on OP's endsession endpoint using client credentials."""
+        body_dict = {
+            'client_id': current_app.config['KEYCLOAK_CLIENT_ID'],
+            'client_secret': current_app.config['KEYCLOAK_CLIENT_SECRET'],
+            'refresh_token': openid_connect.get_refresh_token()
+        }
+
+        response, _ = Http().request(
+            uri=current_app.config['KEYCLOAK_LOGOUT_URI'],
+            method='POST',
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': f'Bearer {openid_connect.get_access_token()}'
+            },
+            body=urlencode(body_dict)
+        )
+
+        if hasattr(response, 'status'):
+            if 200 <= response.status <= 299:
+                current_app.logger.info('Succesfully logged out.')
+        else:
+            current_app.logger.warning('Logging out failed!')
+
         """
         Hash a plaintext string using SHA-256 with base64 encoding.
 
