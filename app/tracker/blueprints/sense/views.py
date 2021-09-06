@@ -1,14 +1,12 @@
-from flask import (
-    Blueprint,
-    render_template, request)
-from flask_login import login_required
-
+from flask import Blueprint, render_template, request
 from lib.util_sqlalchemy import paginate, status, parts_of_speech, domain, aspect
 from tracker.blueprints.emotion.models import Emotion
 from tracker.blueprints.sense.forms import SenseRelationsHistoryForm, SenseHistoryForm
 from tracker.blueprints.sense.models import get_sense_relation_list, TrackerSenseRelationsHistory, Sense, \
     find_sense_history, find_sense_incoming_relations, find_sense_outgoing_relations, TrackerSenseHistory, Morphology
 from tracker.blueprints.synset.models import get_user_name_list
+from tracker.blueprints.user.models import KeycloakServiceClient
+from tracker.extensions import openid_connect
 
 sense = Blueprint('sense', __name__, template_folder='templates')
 
@@ -19,7 +17,7 @@ class SenseistoryForm(object):
 
 @sense.route('/senses/history', defaults={'page': 1})
 @sense.route('/senses/history/page/<int:page>')
-@login_required
+@openid_connect.require_login
 def senses_history(page):
 
     filter_form = SenseHistoryForm()
@@ -53,13 +51,14 @@ def senses_history(page):
         sense_history=pagination,
         status=status(),
         pos=parts_of_speech(),
-        domain=domain()
+        domain=domain(),
+        keycloak=KeycloakServiceClient()
     )
 
 
 @sense.route('/senses/relations/history', defaults={'page': 1})
 @sense.route('/senses/relations/history/page/<int:page>')
-@login_required
+@openid_connect.require_login
 def senses_relations_history(page):
     filter_form = SenseRelationsHistoryForm()
 
@@ -69,7 +68,7 @@ def senses_relations_history(page):
     cache_key = 'lurh-count-{}_{}_{}_{}_{}'.format(
         request.args.get('date_from', ''),
         request.args.get('date_to', ''),
-        request.args.get('sense_id', '') ,
+        request.args.get('sense_id', ''),
         request.args.get('user', ''),
         request.args.get('relation_type', '')
     )
@@ -91,12 +90,13 @@ def senses_relations_history(page):
         form=filter_form,
         users=users,
         relations=relations,
-        history=pagination
+        history=pagination,
+        keycloak=KeycloakServiceClient()
     )
 
 
 @sense.route('/sense/<int:id>')
-@login_required
+@openid_connect.require_login
 def sense_by_id(id):
 
     sense = Sense.query.get(id)
@@ -132,5 +132,6 @@ def sense_by_id(id):
         outgoing_history=outgoing_history,
         incoming_history=incoming_history,
         emotions=emotions,
-        morpho=morpho
+        morpho=morpho,
+        keycloak=KeycloakServiceClient()
     )

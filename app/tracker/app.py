@@ -1,22 +1,22 @@
 import logging
 
-from flask import Flask, render_template, url_for
+from flask import Flask, render_template, url_for, current_app
 from flask_admin import Admin
 from flask_admin.menu import MenuLink
 from flask_less import lessc
-from flask_login import login_manager
 from werkzeug.contrib.fixers import ProxyFix
+from tracker.blueprints.user.models import CurrentUser
 from tracker.blueprints.tracker_admin.models import AdminQuery
-from tracker.blueprints.tracker_admin.views import AdminIndexView, AdminQueryView
-from tracker.blueprints.user.models import User
+from tracker.blueprints.tracker_admin.views import CustomAdminIndexView, AdminQueryView
 
 from tracker.extensions import (
     debug_toolbar,
     db,
-    login_manager,
+    openid_connect,
     limiter,
     csrf
 )
+
 from werkzeug.debug import DebuggedApplication
 
 blueprints_to_import = [
@@ -26,15 +26,17 @@ blueprints_to_import = [
     "sense",
     "emotion",
     "user",
+    "keycloak_debug"
 ]
 
 
 def create_app(settings_override=None):
     app = __create_app(settings_override)
     db.create_all(app=app)
-    from tracker.celery import celery  # called to run celery setup correctly
+    from tracker.celery import celery  # called to run celery setup correctly  # noqa: F401
     register_blueprints(app)
     register_admin(app)
+    inject_global_args(app)
     return app
 
 
@@ -64,10 +66,18 @@ def register_admin(app):
             name='Query Admin',
             template_mode='bootstrap3',
             endpoint='admin',
-            index_view=AdminIndexView()
+            index_view=CustomAdminIndexView(),
+            base_template='admin/base.html'
         )
         admin.add_link(MenuLink(name='Tracker', url=url_for('page.home')))
         admin.add_view(AdminQueryView(AdminQuery, db.session, category='Models'))
+
+
+def inject_global_args(app):
+    def _inject_currentuser_and_currentapp():
+        return dict(current_user=CurrentUser(), current_app=current_app)
+
+    app.context_processor(_inject_currentuser_and_currentapp)
 
 
 def __create_app(settings_override=None):
@@ -94,7 +104,6 @@ def __create_app(settings_override=None):
     __middleware(app)
     __error_templates(app)
     __extensions(app)
-    __authentication(User)
 
     if app.debug:
         app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
@@ -113,26 +122,10 @@ def __extensions(app):
     debug_toolbar.init_app(app)
     csrf.init_app(app)
     db.init_app(app)
-    login_manager.init_app(app)
+    openid_connect.init_app(app)
     limiter.init_app(app)
 
     return None
-
-
-def __authentication(user_model):
-    """
-    Initialize the Flask-Login extension (mutates the app passed in).
-
-    :param app: Flask application instance
-    :param user_model: Model that contains the authentication information
-    :type user_model: SQLAlchemy model
-    :return: None
-    """
-    login_manager.login_view = 'user.login'
-
-    @login_manager.user_loader
-    def load_user(uid):
-        return user_model.query.get(uid)
 
 
 def __middleware(app):

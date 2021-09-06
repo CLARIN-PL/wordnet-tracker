@@ -1,14 +1,11 @@
-from flask import (
-    Blueprint,
-    render_template, request)
-from flask_login import login_required
-
-
+from flask import Blueprint, render_template, request
 from lib.util_sqlalchemy import paginate, status, parts_of_speech
 from tracker.blueprints.synset.forms import SynsetHistoryForm, SynsetRelationsHistoryForm
 from tracker.blueprints.synset.models import TrackerSynsetsHistory, get_user_name_list, \
     TrackerSynsetsRelationsHistory, get_synset_relation_list, Synset, find_synset_incoming_relations, \
     find_synset_outgoing_relations, find_synset_senses, find_synset_sense_history, find_synset_history
+from tracker.blueprints.user.models import KeycloakServiceClient
+from tracker.extensions import openid_connect
 
 
 synset = Blueprint('synset', __name__, template_folder='templates')
@@ -16,19 +13,22 @@ synset = Blueprint('synset', __name__, template_folder='templates')
 
 @synset.route('/synsets', defaults={'page': 1})
 @synset.route('/synsets/page/<int:page>')
-@login_required
+@openid_connect.require_login
 def synsets(page):
     paginated_users = Synset.query \
         .filter(Synset.search(request.args.get('gq', ''))) \
         .paginate(page, 50, True)
 
-    return render_template('synset/synsets.html',
-                           synsets=paginated_users)
+    return render_template(
+        'synset/synsets.html',
+        synsets=paginated_users,
+        keycloak=KeycloakServiceClient()
+    )
 
 
 @synset.route('/synsets/relations/history', defaults={'page': 1})
 @synset.route('/synsets/relations/history/page/<int:page>')
-@login_required
+@openid_connect.require_login
 def synsets_relations_history(page):
     filter_form = SynsetRelationsHistoryForm()
 
@@ -60,13 +60,14 @@ def synsets_relations_history(page):
         form=filter_form,
         users=users,
         relations=relations,
-        history=pagination
+        history=pagination,
+        keycloak=KeycloakServiceClient()
     )
 
 
 @synset.route('/synsets/history', defaults={'page': 1})
 @synset.route('/synsets/history/page/<int:page>')
-@login_required
+@openid_connect.require_login
 def synsets_history(page):
     filter_form = SynsetHistoryForm()
 
@@ -93,12 +94,13 @@ def synsets_history(page):
         'synset/synset-history.html',
         form=filter_form,
         users=users,
-        synsets=pagination
+        synsets=pagination,
+        keycloak=KeycloakServiceClient()
     )
 
 
 @synset.route('/synsets/<int:id>')
-@login_required
+@openid_connect.require_login
 def synset_by_id(id):
 
     synset = Synset.query.get(id)
@@ -124,5 +126,6 @@ def synset_by_id(id):
         senses_history=senses_history,
         senses=senses,
         synset=synset,
-        synset_history=synset_history
+        synset_history=synset_history,
+        keycloak=KeycloakServiceClient()
     )

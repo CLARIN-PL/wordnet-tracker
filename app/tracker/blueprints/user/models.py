@@ -1,16 +1,16 @@
-import base64
-import hashlib
-from collections import OrderedDict
-from hashlib import md5
-
+import json
+from math import ceil
 from flask import current_app
-from sqlalchemy import or_, text, and_
-from flask_login import UserMixin
+from sqlalchemy import text
+from six.moves.urllib.parse import urlencode
+from httplib2 import Http
+from typing import Any, List, Dict, Iterable, Union
 
-from itsdangerous import URLSafeTimedSerializer, \
-    TimedJSONWebSignatureSerializer
-
-from tracker.extensions import db
+from tracker.extensions import db, openid_connect
+from config.settings import client_secrets
+from config.kc_admin_endpoints import (
+    VIEW_USERS_URI, USER_CLIENT_ROLES_URI, VIEW_CLIENTS_URI
+)
 
 
 def user_activity_between_dates(from_date, to_date):
@@ -29,7 +29,7 @@ def user_activity_between_dates(from_date, to_date):
     return db.engine.execute(sql, {'from_date': from_date, 'to_date': to_date})
 
 
-def user_activity_month(year,month, user):
+def user_activity_month(year, month, user):
     user = user.replace(" ", ".")
     sql = text('SELECT tr.user, \
         count(case when tr.inserted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_created,\
@@ -62,197 +62,414 @@ def user_activity_day(now_date):
     return db.engine.execute(sql, {'now_date': now_date})
 
 
-class User(UserMixin, db.Model):
-    ROLE = OrderedDict([
-        ('USER', 'User'),
-        ('ANONYMOUS', 'Anonymous'),
-        ('ADMIN', 'Administrator')
-    ])
-    __bind_key__ = 'users'
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
+class CurrentUser:
+    """Current user representation based on ID token."""
 
-    # Authentication.
-    role = db.Column(db.Enum(*ROLE, name='role', native_enum=False),
-                     index=True, nullable=False, server_default='USER')
+    def __init__(self) -> None:
+        self.resource_access = self._get_resource_access()
+        self.client_roles = self._get_client_roles()
 
-    first_name = db.Column('firstname', db.String(255), unique=False, index=True)
+    def get_role(self) -> Union[str, None]:
+        """Get first role of the user."""
+        client_roles = self.client_roles
+        if client_roles:
+            return client_roles[0]
+        return None
 
-    last_name = db.Column('lastname', db.String(255), unique=False, index=True)
+    def get_fullname(self) -> Union[str, None]:
+        """Get user's full name."""
+        try:
+            return openid_connect.user_getfield('name')
+        except Exception:
+            current_app.logger.warning("Missing current user's fullname!")
+            return None
 
-    email = db.Column(db.String(255), unique=True, index=True, nullable=False,
-                      server_default='')
+    def get_firstname(self) -> Union[str, None]:
+        """Get user's first name."""
+        try:
+            return openid_connect.user_getfield('given_name')
+        except Exception:
+            current_app.logger.warning("Missing current user's firstname!")
+            return None
 
-    password = db.Column(db.String(128), nullable=False, server_default='')
+    def get_lastname(self) -> Union[str, None]:
+        """Get user's last name."""
+        try:
+            return openid_connect.user_getfield('family_name')
+        except Exception:
+            current_app.logger.warning("Missing current user's lastname!")
+            return None
 
-    def __init__(self, **kwargs):
-        # Call Flask-SQLAlchemy's constructor.
-        super(User, self).__init__(**kwargs)
+    def get_email(self) -> Union[str, None]:
+        """Get user's email address."""
+        try:
+            return openid_connect.user_getfield('email')
+        except Exception:
+            current_app.logger.warning("Missing current user's email!")
+            return None
 
-        self.password = User.encrypt_password(kwargs.get('password', ''))
+    def is_admin(self) -> bool:
+        """Determines whether the user is an admin.
 
-    @classmethod
-    def find_by_email(cls, email):
+        Checks if user's roles contains admin role specified in configuration.
         """
-        Find a user by their e-mail.
+        admin_role = current_app.config['KEYCLOAK_ADMIN_ROLE']
+        return admin_role in self.client_roles
 
-        :param email: Email
-        :type email: str
-        :return: User instance
-        """
-        return User.query.filter(User.email == email).first()
+    def is_loggedin(self) -> bool:
+        """Checks if user logged in using Flask-OIDC build in method."""
+        return openid_connect.user_loggedin
 
-    @classmethod
-    def find_all(cls):
-        """
-        Find all users.
-        """
-        return User.query.all()
+    def logout(self):
+        """Logout the current user.
 
-    @classmethod
-    def find_by_fullname(cls, first_name, last_name):
+        Clears cookie ID token data and sending request on OP's endsession endpoint.
         """
-        Find a user by first name and last name.
-        :param first_name: User first name
-        :param last_name: User last name
-        :return: User instance
-        """
-        return User.query.filter(and_(User.first_name == first_name, User.last_name == last_name)).first()
+        if self.is_loggedin():
+            self._send_logout_request()
+            openid_connect.logout()
+        else:
+            current_app.logger.info(
+                'Unable to log out the user. Already logged out.'
+            )
 
-    @classmethod
-    def encrypt_password(cls, plaintext_password):
-        """
-        Hash a plaintext string using SHA-256 with base64 encoding.
+    def _get_resource_access(self) -> Dict[str, Any]:
+        """Get access data from OP (OpenID Connect Provider).
 
-        :param plaintext_password: Password in plain text
-        :type plaintext_password: str
-        :return: str
+        Access data contains information such as client roles etc.
+
+        Returns:
+            Dict[str, Any]: Access data, None if an excepetion occured.
         """
-        if plaintext_password:
-            hash_object = hashlib.sha256(plaintext_password.encode())
-            hex_dig = hash_object.digest()
-            return base64.b64encode(hex_dig).decode()
+        try:
+            return openid_connect.user_getfield('resource_access')
+        except Exception:
+            current_app.logger.error(
+                "ID token does not contain `resource_access` claim or user \
+                does not have any access granted!"
+            )
+            return None
+
+    def _get_client_roles(self) -> List[str]:
+        """Get user's roles linked to client ID specified in configuration.
+
+        Returns:
+            List[str]: User's roles if access data exists otherwise returns
+            empty list.
+        """
+        if self.resource_access:
+            client_id = current_app.config['KEYCLOAK_CLIENT_ID']
+            if client_id in self.resource_access.keys():
+                roles = self.resource_access[client_id]['roles']
+                if roles:
+                    return roles
+
+            current_app.logger.warning(
+                'Current user does not have any %s roles!', client_id
+            )
+
+        return []
+
+    def _send_logout_request(self):
+        """Send request on OP's endsession endpoint using client credentials."""
+        body_dict = {
+            'client_id': current_app.config['KEYCLOAK_CLIENT_ID'],
+            'client_secret': current_app.config['KEYCLOAK_CLIENT_SECRET'],
+            'refresh_token': openid_connect.get_refresh_token()
+        }
+
+        response, _ = Http().request(
+            uri=current_app.config['KEYCLOAK_LOGOUT_URI'],
+            method='POST',
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': f'Bearer {openid_connect.get_access_token()}'
+            },
+            body=urlencode(body_dict)
+        )
+
+        if hasattr(response, 'status'):
+            if 200 <= response.status <= 299:
+                current_app.logger.info('Succesfully logged out.')
+        else:
+            current_app.logger.warning('Logging out failed!')
+
+
+class KeycloakServiceClient:
+    """App service account client."""
+
+    def __init__(self) -> None:
+        self.service_access_token = self.get_service_access_token()
+        self.bearer_auth_header = {
+            'Authorization': f'Bearer {self.service_access_token}'
+        }
+        self.client_uuid = self.get_client_uuid()
+
+        if self.service_access_token is None:
+            current_app.logger.error(
+                'Missing access token in `%s` object', self.__class__.__name__
+            )
+
+        if self.client_uuid is None:
+            current_app.logger.error(
+                'Missing client uuid in `%s` object', self.__class__.__name__
+            )
+
+    def get_realm_users(self) -> List[Dict[str, Any]]:
+        """Get list of all realm users.
+
+        Receive list of realm user representations from OP's view users
+        endpoint GET request.
+
+        Returns:
+            List[Dict[str, Any]]: List of realm user representations,
+            empty list if response is unsuccessful.
+        """
+        uri = VIEW_USERS_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME'],
+        )
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            realm_users = json.loads(content.decode('utf-8'))
+            return realm_users
+
+        return []
+
+    def get_client_uuid(self) -> Union[str, None]:
+        """Get client_uuid (not clientId!)
+
+        Parse client UUID from client representation received from OP's view
+        clients endpoint GET request.
+
+        Returns:
+            Union[str, None]: Client UUID, None if response is unsuccessful.
+        """
+        uri = VIEW_CLIENTS_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME']
+        ) + f"?clientId={current_app.config['KEYCLOAK_CLIENT_ID']}"
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            client_representation = json.loads(content.decode('utf-8'))
+            if 'id' in client_representation[0].keys():
+                client_uuid = client_representation[0]['id']
+                return client_uuid
 
         return None
 
-    @classmethod
-    def deserialize_token(cls, token):
-        """
-        Obtain a user from de-serializing a signed token.
+    def get_client_role_by_id(self, user_id) -> Union[str, None]:
+        """Get user's client role by id.
 
-        :param token: Signed token.
-        :type token: str
-        :return: User instance or None
-        """
-        private_key = TimedJSONWebSignatureSerializer(
-            current_app.config['SECRET_KEY'])
-        try:
-            decoded_payload = private_key.loads(token)
+        Parse name of the first client role from OP's clients role-mappings
+        endpoint GET request.
 
-            return User.find_by_identity(decoded_payload.get('user_email'))
-        except Exception:
+        Returns:
+            Union[str, None]: Client UUID, None if response is unsuccessful.
+        """
+        uri = USER_CLIENT_ROLES_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME'],
+            user_id=user_id,
+            client_uuid=self.client_uuid
+        )
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            user_client_roles = json.loads(content.decode('utf-8'))
+            if user_client_roles:
+                return user_client_roles[0]['name']
+
+        return None
+
+    def get_service_access_token(self) -> Union[str, None]:
+        """Get service access token.
+
+        Receive access token from OP's access token endpoint POST request using
+        client credentials granty type.
+
+        Returns:
+            Union[str, None]: Access token, None if response is unsuccessful.
+        """
+        body_dict = {
+            'grant_type': 'client_credentials',
+            'client_id': current_app.config['KEYCLOAK_CLIENT_ID'],
+            'client_secret': current_app.config['KEYCLOAK_CLIENT_SECRET']
+        }
+
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+
+        response, content = Http().request(
+            uri=client_secrets['web']['token_uri'],
+            method='POST',
+            headers=headers,
+            body=urlencode(body_dict)
+        )
+
+        if self._successful_response(response):
+            service_token = json.loads(content.decode('utf-8'))
+            return service_token['access_token']
+
+        return None
+
+    def get_user_by_id(self, user_id) -> Union[Dict[str, Any], None]:
+        """Get realm user representation by id.
+
+        Receive realm user representation from OP's view users endpoint GET
+        request by specified [user_id] as url parameter.
+
+        Returns:
+            Union[Dict[str, Any], None]: User representation, None if response
+            is unsuccessful.
+        """
+        uri = VIEW_USERS_URI.format(
+            hostname=current_app.config['KEYCLOAK_ADDRESS'],
+            port=current_app.config['KEYCLOAK_SERVER_PORT'],
+            realm_name=current_app.config['KEYCLOAK_REALM_NAME'],
+        ) + f'/{user_id}'
+
+        response, content = Http().request(
+            uri=uri,
+            method='GET',
+            headers=self.bearer_auth_header
+        )
+
+        if self._successful_response(response):
+            user_representation = json.loads(content.decode('utf-8'))
+            return user_representation
+
+        return None
+
+    def is_admin(self, user_id) -> bool:
+        """Determines whether the user with specified [user_id] is an admin.
+
+        Checks if user's role matches admin role specified in configuration.
+        """
+        user_role = self.get_client_role_by_id(user_id)
+        return user_role == current_app.config['KEYCLOAK_ADMIN_ROLE']
+
+    def _successful_response(self, response) -> bool:
+        """Determines whether the response is successful.
+
+        Args:
+            response (Response): Any response object with status attribute.
+
+        Returns:
+            bool: True if response status is 2XX, False otherwise.
+        """
+        if hasattr(response, 'status'):
+            if 200 <= response.status <= 299:
+                return True
+        return False
+
+
+class Paginator:
+    """Representation of paginated iterable object."""
+
+    def __init__(self, items: Iterable, in_page: int, page=1) -> None:
+        self.items = items
+        self.in_page = in_page
+        self.page = page
+        self.pages: int = ceil(len(items) / in_page)
+        self.has_prev: bool = self._has_prev()
+        self.has_next: bool = self._has_next()
+
+    def iter_pages(self) -> int:
+        """Iterate over page numbers."""
+        for page_num in range(1, self.pages + 1):
+            yield page_num
+
+    def get_page(self, num: int) -> Union[Iterable, None]:
+        """Get page with specified number.
+
+        Args:
+            num (int): Number of the page.
+
+        Returns:
+            Union[Iterable, None]: Slice of given iterable object basing on
+            numbers of items in the page, None if items does not exist.
+        """
+        if not self.items:
             return None
 
-    @classmethod
-    def search(cls, query):
-        """
-        Search a resource by 1 or more fields.
+        start = (num - 1) * self.in_page
+        end = num * self.in_page
+        return self.items[start:end]
 
-        :param query: Search query
-        :type query: str
-        :return: SQLAlchemy filter
-        """
-        if not query or query == '':
-            return ''
+    def _has_prev(self) -> bool:
+        """Determines whether the paginator's previous page exists."""
+        if 1 < self.page <= self.pages:
+            return True
+        return False
 
-        search_query = f'%{query}%'
-        search_chain = (User.email.ilike(search_query),
-                        User.first_name.ilike(search_query),
-                        User.last_name.ilike(search_query),
-                        User.id.ilike(search_query),
-                        User.role.ilike(search_query))
+    def _has_next(self) -> bool:
+        """Determines whether the paginator's next page exists."""
+        if self.page < self.pages:
+            return True
+        return False
 
-        return or_(*search_chain)
 
-    @classmethod
-    def sort_by(cls, field, direction):
-        """
-        Validate the sort field and direction.
+class RealmUser:
+    """Realm user object based on OP's user representation in dict type."""
 
-        :param field: Field name
-        :type field: str
-        :param direction: Direction
-        :type direction: str
-        :return: tuple
-        """
-        if field not in cls.__table__.columns:
-            field = 'id'
+    def __init__(self, user_representation: Dict[str, Any],
+                 op_service_client=None) -> None:
+        self.user_representation = user_representation
+        try:
+            self.id = self.user_representation['id']
+            self.email = self.user_representation['email']
+            self.firstname = self.user_representation['firstName']
+            self.lastname = self.user_representation['lastName']
+            self.fullname = self._get_fullname()
+            self.op_service_client = op_service_client
+            self.role = self._get_client_role()
+        except Exception:
+            current_app.logger.error(
+                'Incomplete user representation. `%s` object creation failed!',
+                self.__class__.__name__,
+                exc_info=1
+            )
 
-        if direction not in ('asc', 'desc'):
-            direction = 'asc'
+    @property
+    def get_email(self) -> str:
+        return self.email
 
-        return field, direction
+    @property
+    def get_firstname(self) -> str:
+        return self.firstname
 
-    def fullname(self):
-        """
-        Get user fullname
-        :return: str
-        """
-        return self.first_name + " " + self.last_name
+    @property
+    def get_lastname(self) -> str:
+        return self.lastname
 
-    def is_active(self):
-        """
-        Return whether or not the user account is active, this satisfies
-        Flask-Login by overwriting the default value.
+    def _get_fullname(self) -> str:
+        return ' '.join([self.firstname, self.lastname])
 
-        :return: bool
-        """
-        return True
+    def _get_client_role(self) -> str:
+        if self.op_service_client is None or \
+                not isinstance(self.op_service_client, KeycloakServiceClient):
+            return None
 
-    def get_auth_token(self):
-        """
-        Return the user's auth token. Use their password as part of the token
-        because if the user changes their password we will want to invalidate
-        all of their logins across devices. It is completely fine to use
-        md5 here as nothing leaks.
-
-        This satisfies Flask-Login by providing a means to create a token.
-
-        :return: str
-        """
-        private_key = current_app.config['SECRET_KEY']
-
-        serializer = URLSafeTimedSerializer(private_key)
-        data = [str(self.id), md5(self.password.encode('utf-8')).hexdigest()]
-
-        return serializer.dumps(data)
-
-    def authenticated(self, with_password=True, password=''):
-        """
-        Ensure a user is authenticated, and optionally check their password.
-
-        :param with_password: Optionally check their password
-        :type with_password: bool
-        :param password: Optionally verify this as their password
-        :type password: str
-        :return: bool
-        """
-
-        if with_password:
-            return self.password == self.encrypt_password(password)
-
-        return True
-
-    def serialize_token(self, expiration=3600):
-        """
-        Sign and create a token that can be used for things such as resetting
-        a password or other tasks that involve a one off token.
-
-        :param expiration: Seconds until it expires, defaults to 1 hour
-        :type expiration: int
-        :return: JSON
-        """
-        private_key = current_app.config['SECRET_KEY']
-
-        serializer = TimedJSONWebSignatureSerializer(private_key, expiration)
-        return serializer.dumps({'user_email': self.email}).decode('utf-8')
+        return self.op_service_client.get_client_role_by_id(self.id)

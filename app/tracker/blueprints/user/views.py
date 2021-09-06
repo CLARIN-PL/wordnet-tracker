@@ -1,109 +1,96 @@
 from time import gmtime, strftime
+from flask import Blueprint, redirect, request, url_for, render_template
+from tracker.blueprints.user.forms import SearchForm, UserActivityForm
+from tracker.blueprints.user.models import (
+    CurrentUser, KeycloakServiceClient, Paginator, RealmUser,
+    user_activity_day, user_activity_between_dates, user_activity_month
+)
 
-from flask import Blueprint, redirect, request, flash, url_for, render_template
+from tracker.extensions import openid_connect
+from utils import value_present, sort_by_attr
 
-from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy import text
-from lib.safe_next_url import safe_next_url
-
-from tracker.blueprints.user.decorator import anonymous_required
-from tracker.blueprints.user.forms import LoginForm, SearchForm, UserActivityForm
-from tracker.blueprints.user.models import User, user_activity_day, user_activity_between_dates, user_activity_month
 
 user = Blueprint('user', __name__, template_folder='templates')
 
 
-@user.route('/login', methods=['GET', 'POST'])
-@anonymous_required()
-def login():
-    form = LoginForm()
-
-    if form.validate_on_submit():
-        u = User.find_by_email(request.form.get('identity'))
-
-        if u and u.authenticated(password=request.form.get('password')):
-            # As you can see remember me is always enabled, this was a design
-            # decision I made because more often than not users want this
-            # enabled. This allows for a less complicated login form.
-            #
-            # If however you want them to be able to select whether or not they
-            # should remain logged in then perform the following 3 steps:
-            # 1) Replace 'True' below with: request.form.get('remember', False)
-            # 2) Uncomment the 'remember' field in user/forms.py#LoginForm
-            # 3) Add a checkbox to the login form with the id/name 'remember'
-            if login_user(u, remember=True) and u.is_active():
-                return redirect(url_for('page.home'))
-            else:
-                flash('This account has been disabled.', 'error')
-        else:
-            flash('Identity or password is incorrect.', 'error')
-
-    return render_template('user/login.html', form=form)
-
-
 @user.route('/profile')
-@login_required
+@openid_connect.require_login
 def profile():
-    q = request.args.get('q', '')
-    u = current_user
+    keycloak = KeycloakServiceClient()
+    current_user = CurrentUser()
 
-    if q != '':
-        if "." in q:
-            fullname = q.split(".")
+    q = request.args.get('q', current_user.get_fullname())
+    user_id = request.args.get('user_id', None)
+
+    if user_id is not None:
+        user_repr = keycloak.get_user_by_id(user_id)
+        if user_repr is not None:
+            user = RealmUser(user_repr, op_service_client=keycloak)
         else:
-            fullname = q.split()
-
-        first_name = ""
-        last_name = ""
-
-        if len(fullname) > 0:
-            first_name = fullname[0]
-            if len(fullname) > 1:
-                last_name = fullname[1]
-
-        u = User.find_by_fullname(first_name, last_name)
+            user = None
+    else:
+        user = current_user
 
     results = user_activity_month(strftime("%Y", gmtime()), strftime("%m", gmtime()), q)
-    items, total = calculate_stats(results)
+    items, _ = calculate_stats(results)
 
-    return render_template('user/profile.html', user=u, stats=items)
+    return render_template(
+        'user/profile.html',
+        stats=items,
+        user=user,
+        keycloak=KeycloakServiceClient()
+    )
 
 
 @user.route('/users', defaults={'page': 1})
 @user.route('/users/page/<int:page>')
-@login_required
+@openid_connect.require_login
 def users(page):
+    q = request.args.get('q', None)
+    sort = request.args.get('sort', None)
+    order = request.args.get('order', None)
+    keycloak = KeycloakServiceClient()
+    realm_users = keycloak.get_realm_users()
+
+    if realm_users is not None:
+        if q is not None:
+            realm_users = [
+                RealmUser(user_repr, op_service_client=keycloak)
+                for user_repr in realm_users
+                if value_present(q, user_repr)
+            ]
+        else:
+            realm_users = [
+                RealmUser(user_repr, op_service_client=keycloak)
+                for user_repr in realm_users
+            ]
+
+        if sort is not None and order is not None:
+            sort_by_attr(realm_users, attribute=sort, order_arg=order)
+
+    paginator = Paginator(realm_users, in_page=30, page=page)
+    users = paginator.get_page(page)
+
     search_form = SearchForm()
 
-    sort_by = User.sort_by(request.args.get('sort', 'id'),
-                           request.args.get('direction', 'desc'))
-
-    order_values = '{0} {1}'.format(sort_by[0], sort_by[1])
-
-    arg = request.args.get('q', '')
-    if arg == '':
-        paginated_users = User.query.paginate(page, 50, True)
-    else:
-        paginated_users = User.query \
-            .filter(User.search(request.args.get('q', ''))) \
-            .order_by(User.role.asc(), text(order_values)) \
-            .paginate(page, 50, True)
-
-    return render_template('user/users.html',
-                           form=search_form,
-                           users=paginated_users)
+    return render_template(
+        'user/users.html',
+        form=search_form,
+        paginator=paginator,
+        users=users,
+        openid_connect=openid_connect,
+        keycloak=keycloak
+    )
 
 
 @user.route("/logout")
-@login_required
 def logout():
-    logout_user()
-    flash('You have been logged out.', 'success')
-    return redirect(url_for('user.login'))
+    CurrentUser().logout()
+    return redirect(url_for('page.home'))
 
 
 @user.route('/users/activity')
-@login_required
+@openid_connect.require_login
 def users_activity():
 
     search_from = UserActivityForm()
@@ -115,10 +102,13 @@ def users_activity():
 
     items, total = calculate_stats(stats)
 
-    return render_template('user/users-activity.html',
-                           form=search_from,
-                           stats=items,
-                           total=total)
+    return render_template(
+        'user/users-activity.html',
+        form=search_from,
+        stats=items,
+        total=total,
+        keycloak=KeycloakServiceClient()
+    )
 
 
 def calculate_stats(stats):

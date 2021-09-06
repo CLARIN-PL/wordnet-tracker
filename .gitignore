@@ -9,6 +9,12 @@ __pycache__/
 
 .idea/*
 .env
+**/config/client_secrets.json
+**/realm-export.json
+**/flask_oidc.db
+
+# IDE
+.vscode
 
 # Distribution / packaging
 .Python

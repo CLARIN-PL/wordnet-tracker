@@ -1,19 +1,18 @@
-import datetime
 from calendar import monthrange
 from time import strftime, gmtime
 
 from flask import Blueprint, render_template, jsonify, request
-from flask_login import login_required
 
 from tracker.blueprints.page.models import find_created_items_today, find_user_activity_month, \
     user_activity_cached
-from tracker.extensions import cache
+from tracker.blueprints.user.models import KeycloakServiceClient
+from tracker.extensions import cache, openid_connect
 
 page = Blueprint('page', __name__, template_folder='templates')
 
 
 @page.route('/')
-@login_required
+@openid_connect.require_login
 def home():
     result = cache.get("dashboard_today_items")
     if result is None:
@@ -23,7 +22,11 @@ def home():
             result.append(i)
         cache.set("dashboard_today_items", result, timeout=10 * 60)
 
-    return render_template('page/dashboard.html', stats=result)
+    return render_template(
+        'page/dashboard.html',
+        stats=result,
+        keycloak=KeycloakServiceClient()
+    )
 
 
 @page.route('/api/users/activity/now')

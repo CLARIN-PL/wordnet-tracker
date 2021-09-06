@@ -1,37 +1,40 @@
-import flask_admin
-from flask import url_for, request, current_app, render_template, abort, make_response, Blueprint
+from flask import (
+    current_app, render_template, make_response, Blueprint, request, url_for
+)
+
+from flask_admin import AdminIndexView
 from flask_admin.contrib import sqla
-from flask_login import login_required, current_user
 from sqlalchemy import select
 from werkzeug.utils import redirect
 
 from tracker.blueprints.tracker_admin import models
-from tracker.extensions import db
+from tracker.blueprints.user.models import KeycloakServiceClient, CurrentUser
+from tracker.extensions import db, openid_connect
 from urllib.parse import quote
 
 tracker_admin = Blueprint('tracker_admin', __name__, template_folder='templates')
 
 
-class AdminIndexView(flask_admin.AdminIndexView):
+class CustomAdminIndexView(AdminIndexView):
 
     def is_accessible(self):
-        return hasattr(current_user, 'role') and current_user.role == "ADMIN"
+        return CurrentUser().is_admin()
 
     def inaccessible_callback(self, name, **kwargs):
-        return redirect(url_for('page.home', next=request.url))
+        return redirect(url_for('page.home'))
 
 
 class AdminQueryView(sqla.ModelView):
 
     def is_accessible(self):
-        return hasattr(current_user, 'role') and current_user.role == "ADMIN"
+        return CurrentUser().is_admin()
 
     def inaccessible_callback(self, name, **kwargs):
-        return redirect(url_for('page.home', next=request.url))
+        return redirect(url_for('page.home'))
 
 
 @tracker_admin.route('/admin_query/<int:pk>/')
-@login_required
+@openid_connect.require_login
 def admin_query(pk):
     keys, result, query_name = models.AdminQuery.results(pk)
     context = {
@@ -39,12 +42,16 @@ def admin_query(pk):
         'pk': pk,
         'data': result,
         'keys': keys,
+        'keycloak': KeycloakServiceClient
     }
-    return render_template('tracker_admin/admin-query.html', **context)
+    return render_template(
+        'tracker_admin/admin-query.html',
+        **context,
+    )
 
 
 @tracker_admin.route('/admin_query/<int:pk>/csv')
-@login_required
+@openid_connect.require_login
 def admin_query_csv(pk):
     headings, rows, query_name = models.AdminQuery.results(pk)
     csv_content = ",".join(headings)
@@ -59,7 +66,7 @@ def admin_query_csv(pk):
 
 
 @tracker_admin.route('/statistics/')
-@login_required
+@openid_connect.require_login
 def admin_query_list_statistic():
     engine = db.get_engine(current_app)
     connection = engine.connect()
@@ -72,15 +79,21 @@ def admin_query_list_statistic():
         aqs = [{key: value for (key, value) in o.items()} for o in aqs]
     else:
         aqs = []
+
     context = {
         'data': aqs,
-        'title': 'Statistics'
+        'title': 'Statistics',
+        'keycloak': KeycloakServiceClient
     }
-    return render_template('tracker_admin/admin-query-list.html', **context)
+
+    return render_template(
+        'tracker_admin/admin-query-list.html',
+        **context
+    )
 
 
 @tracker_admin.route('/diagnostics/')
-@login_required
+@openid_connect.require_login
 def admin_query_list_diagnostic():
     engine = db.get_engine(current_app)
     connection = engine.connect()
@@ -93,8 +106,14 @@ def admin_query_list_diagnostic():
         aqs = [{key: value for (key, value) in o.items()} for o in aqs]
     else:
         aqs = []
+
     context = {
         'data': aqs,
-        'title': 'Diagnostics'
+        'title': 'Diagnostics',
+        'keycloak': KeycloakServiceClient
     }
-    return render_template('tracker_admin/admin-query-list.html', **context)
+
+    return render_template(
+        'tracker_admin/admin-query-list.html',
+        **context,
+    )

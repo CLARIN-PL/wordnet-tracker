@@ -14,12 +14,11 @@
                 WordNet Tracker</a>
         </div>
         <!-- /.navbar-header -->
-
         <ul class="nav navbar-top-links navbar-right">
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                    <i class="fa fa-user fa-fw"></i> {{ current_user.fullname() }}
-                    ({{ current_user.ROLE[current_user.role] }}) <i class="fa fa-caret-down"></i>
+                    <i class="fa fa-user fa-fw"></i>{{ current_user.get_fullname() }}
+                    ({{ current_user.get_role()|default('-', true) }}) <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-user">
                     <li><a href="{{ url_for('user.profile') }}"><i class="fa fa-user fa-fw"></i> User Profile</a></li>
@@ -32,7 +31,7 @@
             <!-- /.dropdown -->
         </ul>
         <!-- /.navbar-top-links -->
-
+        
         <div class="navbar-default sidebar" role="navigation">
             <div class="sidebar-nav navbar-collapse">
                 <ul class="nav" id="side-menu">
@@ -47,9 +46,20 @@
 
                         <!-- /input-group -->
                     </li>
-                    {% if current_user.role == 'ADMIN' %}
+                    {% if current_user.is_admin() %}
                         <li>
-                            <a href="{{ url_for('admin.index') }}"><i class="fa fa-user fa-fw"></i> Admin Panel</a>
+                            <a href="#"><i class="fa fa-user fa-fw"></i> Admin Panel</a>
+                            <ul class="nav nav-second-level">
+                                <li>
+                                    <!-- <a href="{{ url_for('admin.index') }}">Admin Index</a> -->
+                                    <a href="/admin/adminquery">Admin Query</a>
+                                </li>
+                                {% if current_app.config["DEBUG"] %}
+                                    <li>
+                                        <a href="{{ url_for('keycloak_debug.home') }}">Keycloak DEBUG</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
                         </li>
                     {% endif %}
                     <li>
@@ -110,5 +120,5 @@
         <!-- /.navbar-static-side -->
     </nav>
 {% endblock %}
-{% block content %}{% endblock %}
 
+{% block content %}{% endblock %}
