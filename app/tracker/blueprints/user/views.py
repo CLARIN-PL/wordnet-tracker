@@ -3,8 +3,9 @@ from flask import Blueprint, redirect, request, url_for, render_template
 from tracker.blueprints.user.forms import SearchForm, UserActivityForm
 from tracker.blueprints.user.models import (
     CurrentUser, KeycloakServiceClient, Paginator, RealmUser,
-    user_activity_day, user_activity_between_dates, user_activity_month
+    users_activity_day, users_activity_between_dates, user_activity_month
 )
+from tracker.blueprints.page.models import count_all_operations
 
 from tracker.extensions import openid_connect
 from utils import value_present, sort_by_attr
@@ -19,7 +20,7 @@ def profile():
     keycloak = KeycloakServiceClient()
     current_user = CurrentUser()
 
-    q = request.args.get('q', current_user.get_fullname())
+    q = request.args.get('q', current_user.get_email())
     user_id = request.args.get('user_id', None)
 
     if user_id is not None:
@@ -92,13 +93,12 @@ def logout():
 @user.route('/users/activity')
 @openid_connect.require_login
 def users_activity():
-
     search_from = UserActivityForm()
 
     if request.args.get('date_from', '') != '' and request.args.get('date_to', '') != '':
-        stats = user_activity_between_dates(request.args.get('date_from', ''), request.args.get('date_to', ''))
+        stats = users_activity_between_dates(request.args.get('date_from', ''), request.args.get('date_to', ''))
     else:
-        stats = user_activity_day(strftime("%Y-%m-%d", gmtime()))
+        stats = users_activity_day(strftime("%d-%m-%Y", gmtime()))
 
     items, total = calculate_stats(stats)
 
@@ -112,28 +112,73 @@ def users_activity():
 
 
 def calculate_stats(stats):
-    items = []
-    for s in stats:
-        row = dict()
-        total = 0
-        for i in range(0, len(s)):
-
-            if i == 0:
-                if s[i] is None:
-                    row['user'] = 'None'
-                else:
-                    row['user'] = s[i]
-            else:
-                row[str(i)] = s[i]
-                total = total + s[i]
-        row['total'] = total
-        items.append(row)
-
+    items = dict()
     total = dict()
 
-    if len(items) > 0:
-        for i in range(1, 11):
-            total[str(i)] = sum(item[str(i)] for item in items)
-        total['total'] = sum(item['total'] for item in items)
+    for s in stats:
+        if "user" not in s:
+            user_email = "None"
+        else:
+            user_email = s["user"]
 
-    return items, total
+        if user_email not in items:
+            items[user_email] = dict()
+            items[user_email]["user"] = user_email
+            items[user_email]["total"] = count_all_operations(s)
+            items[user_email]["senses_created"] = s["senses_created"]
+            items[user_email]["senses_modified"] = s["senses_modified"]
+            items[user_email]["senses_removed"] = s["senses_removed"]
+            items[user_email]["sense_relations_created"] = s["sense_relations_created"]
+            items[user_email]["sense_relations_modified"] = s["sense_relations_modified"]
+            items[user_email]["sense_relations_removed"] = s["sense_relations_removed"]
+            items[user_email]["synsets_created"] = s["synsets_created"]
+            items[user_email]["synsets_modified"] = s["synsets_modified"]
+            items[user_email]["synsets_removed"] = s["synsets_removed"]
+            items[user_email]["synset_relations_created"] = s["synset_relations_created"]
+            items[user_email]["synset_relations_modified"] = s["synset_relations_modified"]
+            items[user_email]["synset_relations_removed"] = s["synset_relations_removed"]
+        else:
+            items[user_email]["total"] += count_all_operations(s)
+            items[user_email]["senses_created"] += s["senses_created"]
+            items[user_email]["senses_modified"] += s["senses_modified"]
+            items[user_email]["senses_removed"] += s["senses_removed"]
+            items[user_email]["sense_relations_created"] += s["sense_relations_created"]
+            items[user_email]["sense_relations_modified"] += s["sense_relations_modified"]
+            items[user_email]["sense_relations_removed"] += s["sense_relations_removed"]
+            items[user_email]["synsets_created"] += s["synsets_created"]
+            items[user_email]["synsets_modified"] += s["synsets_modified"]
+            items[user_email]["synsets_removed"] += s["synsets_removed"]
+            items[user_email]["synset_relations_created"] += s["synset_relations_created"]
+            items[user_email]["synset_relations_modified"] += s["synset_relations_modified"]
+            items[user_email]["synset_relations_removed"] += s["synset_relations_removed"]
+
+        if len(total.keys()) == 0:
+            total["total"] = count_all_operations(s)
+            total["total_senses_created"] = s["senses_created"]
+            total["total_senses_modified"] = s["senses_modified"]
+            total["total_senses_removed"] = s["senses_removed"]
+            total["total_sense_relations_created"] = s["sense_relations_created"]
+            total["total_sense_relations_modified"] = s["sense_relations_modified"]
+            total["total_sense_relations_removed"] = s["sense_relations_removed"]
+            total["total_synsets_created"] = s["synsets_created"]
+            total["total_synsets_modified"] = s["synsets_modified"]
+            total["total_synsets_removed"] = s["synsets_removed"]
+            total["total_synset_relations_created"] = s["synset_relations_created"]
+            total["total_synset_relations_modified"] = s["synset_relations_modified"]
+            total["total_synset_relations_removed"] = s["synset_relations_removed"]
+        else:
+            total["total"] += count_all_operations(s)
+            total["total_senses_created"] += s["senses_created"]
+            total["total_senses_modified"] += s["senses_modified"]
+            total["total_senses_removed"] += s["senses_removed"]
+            total["total_sense_relations_created"] += s["sense_relations_created"]
+            total["total_sense_relations_modified"] += s["sense_relations_modified"]
+            total["total_sense_relations_removed"] += s["sense_relations_removed"]
+            total["total_synsets_created"] += s["synsets_created"]
+            total["total_synsets_modified"] += s["synsets_modified"]
+            total["total_synsets_removed"] += s["synsets_removed"]
+            total["total_synset_relations_created"] += s["synset_relations_created"]
+            total["total_synset_relations_modified"] += s["synset_relations_modified"]
+            total["total_synset_relations_removed"] += s["synset_relations_removed"]
+
+    return list(items.values()), total

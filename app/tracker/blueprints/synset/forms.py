@@ -3,15 +3,22 @@ from wtforms import DateField, IntegerField, TextField
 
 
 class SynsetHistoryForm(FlaskForm):
-    date_from = DateField("date from", format="%Y-%m-%d")
-    date_to = DateField("date to", format="%Y-%m-%d")
-    synset_id = IntegerField()
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")
+    synset_id = TextField()
+    user = TextField("user")
+
+
+class SynsetAttributesHistoryForm(FlaskForm):
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")
+    synset_id = TextField()
     user = TextField("user")
 
 
 class SynsetRelationsHistoryForm(FlaskForm):
-    date_from = DateField("date from", format="%Y-%m-%d")
-    date_to = DateField("date to", format="%Y-%m-%d")
-    synset_id = IntegerField()
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")
+    synset_id = TextField()
     user = TextField("user")
     relation_type = TextField("relation_type")

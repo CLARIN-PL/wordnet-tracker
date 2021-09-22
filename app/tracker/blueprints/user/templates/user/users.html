@@ -17,7 +17,7 @@
             </div>
             <div class="col-lg-8">
                 <div class="pull-right">
-                    {{ items.paginate(paginator) }}
+                    {{ items.paginate_users(paginator) }}
                 </div>
             </div>
         </div>
@@ -40,7 +40,7 @@
                             {% for user in users %}
                                 <tr>
                                     <td><a data-toggle="tooltip" data-placement="top" title="{{ user.id }}">{{ user.id[:7] }}...</a></td>
-                                    <td><a href="{{ url_for('user.profile', q=user.fullname, user_id=user.id) }}">
+                                    <td><a href="{{ url_for('user.profile', q=user.email, user_id=user.id) }}">
                                         {{ user.fullname }}</a></td>
                                     <td>{{ user.email }}</td>
                                     <td>{{ user.role|default('-', true) }}</td>
@@ -55,7 +55,7 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="pull-right">
-                        {{ items.paginate(paginator) }}
+                        {{ items.paginate_users(paginator) }}
                     </div>
                 </div>
             </div>

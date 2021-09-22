@@ -16,7 +16,7 @@
                                 <i class="fa fa-sitemap fa-5x"></i>
                             </div>
                             <div class="col-xs-9 text-right">
-                                <div class="huge">{% if stats|length > 0 %}  {{ stats[0][0] }} {% else %} 0 {% endif %}</div>
+                                <div class="huge">{{ stats["new_synsets"] }}</div>
                                 <div>New Synsets</div>
                             </div>
                         </div>
@@ -38,7 +38,7 @@
                                 <i class="fa fa-refresh fa-5x"></i>
                             </div>
                             <div class="col-xs-9 text-right">
-                                <div class="huge">{% if stats|length > 0 %}  {{ stats[0][1] }} {% else %} 0 {% endif %}</div>
+                                <div class="huge">{{ stats["new_synset_relations"] }}</div>
                                 <div>New Synset Relations</div>
                             </div>
                         </div>
@@ -60,7 +60,7 @@
                                 <i class="fa fa-object-group fa-5x"></i>
                             </div>
                             <div class="col-xs-9 text-right">
-                                <div class="huge">{% if stats|length > 0 %}  {{ stats[0][2] }} {% else %} 0 {% endif %}</div>
+                                <div class="huge">{{ stats["new_senses"] }}</div>
                                 <div>New Senses</div>
                             </div>
                         </div>
@@ -82,7 +82,7 @@
                                 <i class="fa fa-retweet fa-5x"></i>
                             </div>
                             <div class="col-xs-9 text-right">
-                                <div class="huge">{% if stats|length > 0 %}  {{ stats[0][3] }} {% else %} 0 {% endif %}</div>
+                                <div class="huge">{{ stats["new_sense_relations"] }}</div>
                                 <div>New Sense Relations</div>
                             </div>
                         </div>

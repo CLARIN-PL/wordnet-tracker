@@ -3,18 +3,25 @@ from wtforms import DateField, IntegerField, TextField
 
 
 class SenseRelationsHistoryForm(FlaskForm):
-    date_from = DateField("date from", format="%Y-%m-%d")
-    date_to = DateField("date to", format="%Y-%m-%d")
-    sense_id = IntegerField("sense_id")
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")
+    sense_id = TextField("sense_id")
     user = TextField("user")
     relation_type = TextField("relation_type")
 
 
 class SenseHistoryForm(FlaskForm):
-    date_from = DateField("date from", format="%Y-%m-%d")
-    date_to = DateField("date to", format="%Y-%m-%d")
-    sense_id = IntegerField("sense_id")
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")
+    sense_id = TextField("sense_id")
     user = TextField("user")
     pos = IntegerField("pos")
     status = IntegerField("status")
+
+
+class SenseAttributesHistoryForm(FlaskForm):
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")
+    sense_id = TextField("sense_id")
+    user = TextField("user")
 

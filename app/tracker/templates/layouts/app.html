@@ -72,6 +72,9 @@
                                 <a href="{{ url_for('synset.synsets_history') }}">Synset History</a>
                             </li>
                             <li>
+                                <a href="{{ url_for('synset.synsets_attributes_history') }}">Synset Attributes History</a>
+                            </li>
+                            <li>
                                 <a href="{{ url_for('synset.synsets_relations_history') }}">Synset Relations History</a>
                             </li>
                         </ul>
@@ -83,18 +86,12 @@
                                 <a href="{{ url_for('sense.senses_history') }}">Sense History</a>
                             </li>
                             <li>
+                                <a href="{{ url_for('sense.senses_attributes_history') }}">Sense Attributes History</a>
+                            </li>
+                            <li>
                                 <a href="{{ url_for('sense.senses_relations_history') }}">Sense Relation History </a>
                             </li>
                         </ul>
-                    </li>
-                    <li>
-                        <a href="#"><i class="fa fa-heart fa-fw"></i> Emotions</a>
-                        <ul class="nav nav-second-level">
-                            <li>
-                                <a href="{{ url_for('emotion.annotator_disagreement') }}">Annotator Disagreement</a>
-                            </li>
-                        </ul>
-
                     </li>
                     <li>
                         <a href="#"><i class="fa fa-users fa-fw"></i> Users</a>

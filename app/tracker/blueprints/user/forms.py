@@ -16,5 +16,5 @@ class LoginForm(FlaskForm):
 
 
 class UserActivityForm(FlaskForm):
-    date_from = DateField("date from", format="%Y-%m-%d")
-    date_to = DateField("date to", format="%Y-%m-%d")
+    date_from = DateField("date from", format="%d-%m-%Y")
+    date_to = DateField("date to", format="%d-%m-%Y")

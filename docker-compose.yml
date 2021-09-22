@@ -6,47 +6,6 @@ services:
     env_file: .env
     volumes:
       - "./app:/app"
-    depends_on:
-      - redis
-      - celery
-    command: sh -c "python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_DATABASE} -t 5 &&
-      gunicorn -c 'python:config.gunicorn' --reload 'tracker.app:create_app()'"
+    command:  sh -c "gunicorn -c 'python:config.gunicorn' --reload 'tracker.app:create_app()'"
     ports:
       - '9000:5000'
-
-  keycloak:
-    image: jboss/keycloak
-    environment:
-      KEYCLOAK_USER: admin
-      KEYCLOAK_PASSWORD: admin
-    ports:
-      - '8080:8080'
-
-  redis:
-    image: redis:5.0.5-alpine
-    ports:
-      - "6379"
-
-  celery:
-    image: tracker_web
-    env_file: .env
-    volumes:
-    - "./app:/app"
-    depends_on:
-      - redis
-    command: sh -c "python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_DATABASE} -t 5 &&
-      python celery_start.py"
-    deploy:
-      resources:
-          limits:
-            memory: 500M
-
-  celerybeat:
-    image: tracker_web
-    env_file: .env
-    volumes:
-    - "./app:/app"
-    depends_on:
-    - redis
-    command: sh -c "python wait-for-db.py -u mysql+pymysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@${MYSQL_HOST}:23306/${MYSQL_DATABASE} -t 5 &&
-      python celerybeat_start.py"

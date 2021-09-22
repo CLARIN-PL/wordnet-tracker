@@ -22,40 +22,40 @@
                                 <tbody>
                                 <tr>
                                     <td class="col-sm-3 text-right">Id</td>
-                                    <td>{{ synset.id }}</td>
+                                    <td>{{ synset['id'] }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-right">Definition</td>
-                                    <td>{% if synset.definition is not none %} {{ synset.definition }} {% endif %}</td>
+                                    <td>{% if "definition" in synset %} {{ synset['definition'] }} {% endif %}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-right">Comment</td>
-                                    <td>{% if synset.comment is not none %} {{ synset.comment }} {% endif %}</td>
+                                    <td>{% if "comment" in synset %} {{ synset['comment'] }} {% endif %}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-right">Abstract</td>
-                                    <td>{{ synset.isabstract }}</td>
+                                    <td>{% if "abstract" in synset %} {{ synset['abstract'] }} {% endif %}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-right">Owner</td>
-                                    <td>{{ synset.owner }}</td>
+                                    <td>{% if "owner" in synset %} {{ synset['owner'] }} {% endif %}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-right">Units String</td>
-                                    <td>{{ synset.unitsstr }}</td>
+                                    <td>{% if "unit_strings" in synset %} {{ synset['unit_strings'] }} {% endif %}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-right">Status</td>
                                     <td>
-                                        {% if synset is not none %}
-                                            <span class="label {{ status[synset.status|string]['tag'] }}">{{ status[synset.status|string]['value'] }}</span>
+                                        {% if "status" in synset %}
+                                            <span class="label {{ status[synset['status']|string]['tag'] }}">{{ status[synset['status']|string]['value'] }}</span>
                                             </td>
                                         {% endif %}
                                 </tr>
                                 <tr>
                                     <td class="text-right">Status Error Comment</td>
-                                    <td>{% if synset.error_comment is not none %}
-                                        {{ synset.error_comment }} {% endif %}</td>
+                                    <td>{% if "error_comment" in synset %}
+                                        {{ synset['error_comment'] }} {% endif %}</td>
                                 </tr>
                                 </tbody>
                             </table>
@@ -69,7 +69,7 @@
                         <i class="fa fa-th-list"></i> Synset History
                     </div>
                     <div class="panel-body">
-                        {% if synset_history.rowcount == 0 %}
+                        {% if synset_history|length == 0 %}
                             <h5 class="text-center">No synset history found</h5>
                         {% else %}
                             <div class="table-responsive">
@@ -88,29 +88,29 @@
                                     <tbody>
                                     {% for s in synset_history %}
                                         <tr>
-                                                                                    <td>
-                                                <div class="text-center small-log bold-log">
-                                                {{s[1] }}
-                                                </div>
-                                                                                       <div class="text-center small-log">
+                                            <td>
+                                                <div class="text-center small-log bold-log">{{s['editor'] }}</div>
+                                                <div class="text-center small-log">
                                                 <time class="short-date"
-                                                      data-datetime="{{ s[0] }}">{{ s[0] }}</time>
-                                            </div>
+                                                      data-datetime="{{ s['timestamp'] }}">{{ s['timestamp'] }}</time>
+                                                </div>
                                             </td>
-                                            <td><div class="text-center">
-                                                {% if s[2]=='created' %}
-                                                <span class="label label-success">Created</span>
-                                            {% elif s[2]=='removed' %}
-                                                <span class="label label-danger">Removed</span>
-                                            {% elif s[2]=='modified' %}
-                                                <span class="label label-info">Modified</span>
-                                            {% endif %}
-                                            </div></td>
-                                            <td>{% if s[3] is not none %} {{ s[3] }} {% endif %}</td>
-                                            <td>{% if s[4] is not none %} {{ s[4] }} {% endif %}</td>
-                                            <td>{% if s[5] is not none %} {{ s[5] }} {% endif %}</td>
-                                            <td>{% if s[6] is not none %} {{ s[6] }} {% endif %}</td>
-                                            <td>{% if s[7] is not none %} {{ s[7] }} {% endif %}</td>
+                                            <td>
+                                                <div class="text-center">
+                                                {% if s['operation'] == 0 %}
+                                                    <span class="label label-success">Created</span>
+                                                {% elif s['operation'] == 2 %}
+                                                    <span class="label label-danger">Removed</span>
+                                                {% elif s['operation'] == 1 %}
+                                                    <span class="label label-info">Modified</span>
+                                                {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>{% if "definition" in s %} {{ s['definition'] }} {% endif %}</td>
+                                            <td>{% if "comment" in s %} {{ s['comment'] }} {% endif %}</td>
+                                            <td>{% if "abstract" in s %} {{ s['abstract'] }} {% endif %}</td>
+                                            <td>{% if "owner" in s %} {{ s['owner'] }} {% endif %}</td>
+                                            <td>{% if "unit_strings" in s %} {{ s['unit_strings'] }} {% endif %}</td>
                                         </tr>
                                     {% endfor %}
                                     </tbody>
@@ -128,14 +128,14 @@
                         <i class="fa fa-object-group"></i> Senses
                     </div>
                     <div class="panel-body">
-                        {% if senses.rowcount == 0 %}
+                        {% if senses|length == 0 %}
                             <h5 class="text-center">Empty synset</h5>
                         {% else %}
                             <div class="list-group">
                                 {% for s in senses %}
-                                    <a href="{{ url_for('sense.sense_by_id', id=s[0]) }}" class="list-group-item">
-                                        {{ s[1] }}
-                                        <span class="pull-right text-muted small"><em>{{ pos[s[2]|string] }}</em>
+                                    <a href="{{ url_for('sense.sense_by_id', id=s['sense_id']) }}" class="list-group-item">
+                                        {{ s['lemma'] }}
+                                        <span class="pull-right text-muted small"><em>{{ pos[s['part_of_speech']|string] }}</em>
                                     </span>
                                     </a>
                                 {% endfor %}
@@ -150,7 +150,7 @@
                         <i class="fa fa-object-group"></i> Senses History
                     </div>
                     <div class="panel-body">
-                        {% if senses_history.rowcount == 0 %}
+                        {% if senses_history|length == 0 %}
                             <h5 class="text-center">No sense history found</h5>
                         {% else %}
                             <div class="table-responsive">
@@ -166,24 +166,22 @@
                                     {% for s in senses_history %}
                                         <tr>
                                             <td>
-                                                <div class="text-center small-log bold-log">
-                                                {{s[1] }}
-                                                </div>
-                                                                                       <div class="text-center small-log">
+                                                <div class="text-center small-log bold-log"> {{s['editor'] }} </div>
+                                                <div class="text-center small-log">
                                                 <time class="short-date"
-                                                      data-datetime="{{ s[0] }}">{{ s[0] }}</time>
+                                                      data-datetime="{{ s['timestamp'] }}">{{ s['timestamp'] }}</time>
                                             </div>
                                             </td>
                                             <td>
                                                  <div class="text-center">
-                                                {% if s[2]=='attached sense' %}
-                                                <span class="label label-success">Attached Sense</span>
-                                            {% elif s[2]=='detached sense' %}
-                                                <span class="label label-danger">Detached Sense</span>
-                                            {% endif %}</td>
+                                                {% if s['operation'] == 0 %}
+                                                    <span class="label label-success">Attached Sense</span>
+                                                {% elif s['operation'] == 2 %}
+                                                    <span class="label label-danger">Detached Sense</span>
+                                                {% endif %}</td>
                                             <td>
-                                                {% if s[3] is not none %}
-                                                    <a href="{{ url_for('sense.sense_by_id', id=s[3]) }}"> {{ s[4] }}</a>
+                                                {% if "id" in s and "lemma" in s %}
+                                                    <a href="{{ url_for('sense.sense_by_id', id=s['id']) }}"> {{ s['lemma'] }}</a>
                                                 {% endif %}
                                             </td>
                                             </td>
@@ -204,7 +202,7 @@
                         <i class="fa fa-sign-in"></i> Incoming Relations
                     </div>
                     <div class="panel-body">
-                        {% if incoming_rel.rowcount == 0 %}
+                        {% if incoming_rel|length == 0 %}
                             <h5 class="text-center">No incoming relations found</h5>
                         {% else %}
                             <div class="table-responsive">
@@ -218,9 +216,9 @@
                                     <tbody>
                                     {% for r in incoming_rel %}
                                         <tr>
-                                            <td>{{ r[0] }}</td>
+                                            <td>{{ r['relation_name'] }}</td>
                                             <td>
-                                                <a href="{{ url_for('synset.synset_by_id', id=r[1]) }}"> {{ r[2] }}</a>
+                                                <a href="{{ url_for('synset.synset_by_id', id=r['synset_id']) }}"> {{ r['synset_name'] }}</a>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -237,7 +235,7 @@
                         <i class="fa fa-sign-in"></i> Incoming Relations History
                     </div>
                     <div class="panel-body">
-                        {% if not incoming_history %}
+                        {% if incoming_history|length == 0 %}
                             <h5 class="text-center">No incoming relations history found</h5>
                         {% else %}
                             <div class="table-responsive">
@@ -255,26 +253,28 @@
                                         <tr>
                                              <td>
                                             <div class="text-center small-log bold-log">
-                                                {{ r.user }}
+                                                {{ r['editor'] }}
                                             </div>
                                             <div class="text-center small-log">
                                                 <time class="short-date"
-                                                      data-datetime="{{ r.datetime }}">{{ r.datetime }}</time>
+                                                      data-datetime="{{ r['timestamp'] }}">{{ r['timestamp'] }}</time>
                                             </div>
                                             </td>
                                             <td>
                                             <div class="text-center">
-                                            {% if r.operation=='created' %}
-                                                <span class="label label-success">Created</span>
-                                            {% elif r.operation=='removed' %}
-                                                <span class="label label-danger">Removed</span>
-                                            {% endif %}
+                                                {% if r['operation'] == 0 %}
+                                                 <span class="label label-success">Created</span>
+                                                {% elif r['operation'] == 1 %}
+                                                     <span class="label label-info">Modified</span>
+                                                {% elif r['operation'] == 2 %}
+                                                     <span class="label label-danger">Removed</span>
+                                                {% endif %}
                                             </div>
                                             </td>
-                                            <td>{{ r.relation_name }}</td>
+                                            <td>{{ r['relation_name'] }}</td>
                                             <td>
-                                                {% if r.source_id is not none %}
-                                                    <a href="{{ url_for('synset.synset_by_id', id=r.source_id) }}"> {{ r.source_unitstr }}</a>
+                                                {% if "synset_id" in r %}
+                                                    <a href="{{ url_for('synset.synset_by_id', id=r['synset_id']) }}"> {{ r['synset_units'] }}</a>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -296,7 +296,7 @@
                         <i class="fa fa-sign-out"></i> Outgoing Relations
                     </div>
                     <div class="panel-body">
-                        {% if outgoing_rel.rowcount == 0 %}
+                        {% if outgoing_rel|length == 0 %}
                             <h5 class="text-center">No outgoing relations found</h5>
                         {% else %}
                             <div class="table-responsive">
@@ -310,9 +310,9 @@
                                     <tbody>
                                     {% for r in outgoing_rel %}
                                         <tr>
-                                            <td>{{ r[0] }}</td>
+                                            <td>{{ r['relation_name'] }}</td>
                                             <td>
-                                                <a href="{{ url_for('synset.synset_by_id', id=r[1]) }}"> {{ r[2] }}</a>
+                                                <a href="{{ url_for('synset.synset_by_id', id=r['synset_id']) }}"> {{ r['synset_name'] }}</a>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -329,7 +329,7 @@
                         <i class="fa fa-sign-out"></i> Outgoing Relations History
                     </div>
                     <div class="panel-body">
-                        {% if not outgoing_history %}
+                        {% if outgoing_history|length == 0 %}
                             <h5 class="text-center">No outgoing relations history found</h5>
                         {% else %}
                             <div class="table-responsive">
@@ -347,26 +347,26 @@
                                         <tr>
                                             <td>
                                             <div class="text-center small-log bold-log">
-                                                {{ r.user }}
+                                                {{ r['editor'] }}
                                             </div>
                                             <div class="text-center small-log">
                                                 <time class="short-date"
-                                                      data-datetime="{{ r.datetime }}">{{ r.datetime }}</time>
+                                                      data-datetime="{{ r['timestamp'] }}">{{ r['timestamp'] }}</time>
                                             </div>
                                             </td>
                                             <td>
                                             <div class="text-center">
-                                            {% if r.operation=='created' %}
+                                            {% if r['operation'] == 0 %}
                                                 <span class="label label-success">Created</span>
-                                            {% elif r.operation=='removed' %}
+                                            {% elif r['operation'] == 2 %}
                                                 <span class="label label-danger">Removed</span>
                                             {% endif %}
                                             </div>
                                             </td>
-                                            <td>{{ r.relation_name }}</td>
+                                            <td>{{ r['relation_name'] }}</td>
                                             <td>
-                                                {% if r.target_id is not none %}
-                                                    <a href="{{ url_for('synset.synset_by_id', id=r.target_id) }}"> {{ r.target_unitstr }}</a>
+                                                {% if "synset_id" in r %}
+                                                    <a href="{{ url_for('synset.synset_by_id', id=r['synset_id']) }}"> {{ r['synset_units'] }}</a>
                                                 {% endif %}
                                             </td>
                                         </tr>

@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request
-from lib.util_sqlalchemy import paginate, status, parts_of_speech, domain, aspect
-from tracker.blueprints.emotion.models import Emotion
-from tracker.blueprints.sense.forms import SenseRelationsHistoryForm, SenseHistoryForm
-from tracker.blueprints.sense.models import get_sense_relation_list, TrackerSenseRelationsHistory, Sense, \
-    find_sense_history, find_sense_incoming_relations, find_sense_outgoing_relations, TrackerSenseHistory, Morphology
-from tracker.blueprints.synset.models import get_user_name_list
+from lib.util_sqlalchemy import status, parts_of_speech, domain, aspect
+from tracker.blueprints.sense.forms import SenseRelationsHistoryForm, SenseHistoryForm, SenseAttributesHistoryForm
+from tracker.blueprints.sense.models import get_sense_relation_list, find_sense, \
+    find_sense_history, find_sense_incoming_relations, find_sense_outgoing_relations, \
+    get_senses_history_search, get_user_name_list, get_sense_relations_history_search, \
+    find_sense_incoming_relations_history, find_sense_outgoing_relations_history, \
+    get_senses_attributes_history_search
 from tracker.blueprints.user.models import KeycloakServiceClient
 from tracker.extensions import openid_connect
 
@@ -19,39 +20,44 @@ class SenseistoryForm(object):
 @sense.route('/senses/history/page/<int:page>')
 @openid_connect.require_login
 def senses_history(page):
-
-    filter_form = SenseHistoryForm()
-    users = get_user_name_list()
-
-    paginated_senses = TrackerSenseHistory.query.filter(
-        TrackerSenseHistory.search_by_form_filter(
-            request.args.get('date_from', ''),
-            request.args.get('date_to', ''),
-            request.args.get('sense_id', ''),
-            request.args.get('user', ''),
-            request.args.get('pos', ''),
-            request.args.get('status', '')
-        )
-    )
-    cache_key = 'luh-count-{}_{}_{}_{}_{}_{}'.format(
+    senses = get_senses_history_search(
         request.args.get('date_from', ''),
         request.args.get('date_to', ''),
         request.args.get('sense_id', ''),
+        request.args.get('user', ''),
         request.args.get('pos', ''),
-        request.args.get('status', ''),
-        request.args.get('user', '')
+        page
     )
-
-    pagination = paginate(paginated_senses, page, 50, cache_key)
 
     return render_template(
         'sense/sense-history.html',
-        form=filter_form,
-        users=users,
-        sense_history=pagination,
+        form=SenseHistoryForm(),
+        users=get_user_name_list(),
+        sense_history=senses,
         status=status(),
         pos=parts_of_speech(),
         domain=domain(),
+        keycloak=KeycloakServiceClient()
+    )
+
+
+@sense.route('/senses/attributes/history', defaults={'page': 1})
+@sense.route('/senses/attributes/history/page/<int:page>')
+@openid_connect.require_login
+def senses_attributes_history(page):
+    sense_attributes_history = get_senses_attributes_history_search(
+        request.args.get('date_from', ''),
+        request.args.get('date_to', ''),
+        request.args.get('sense_id', ''),
+        request.args.get('user', ''),
+        page
+    )
+
+    return render_template(
+        'sense/sense-attributes-history.html',
+        form=SenseAttributesHistoryForm(),
+        users=get_user_name_list(),
+        sense_attributes_history=sense_attributes_history,
         keycloak=KeycloakServiceClient()
     )
 
@@ -60,78 +66,39 @@ def senses_history(page):
 @sense.route('/senses/relations/history/page/<int:page>')
 @openid_connect.require_login
 def senses_relations_history(page):
-    filter_form = SenseRelationsHistoryForm()
-
-    users = get_user_name_list()
-    relations = get_sense_relation_list()
-
-    cache_key = 'lurh-count-{}_{}_{}_{}_{}'.format(
+    relations = get_sense_relations_history_search(
         request.args.get('date_from', ''),
         request.args.get('date_to', ''),
         request.args.get('sense_id', ''),
         request.args.get('user', ''),
-        request.args.get('relation_type', '')
+        request.args.get('relation_type', ''),
+        page
     )
-
-    paginated_senses = TrackerSenseRelationsHistory.query.filter(
-        TrackerSenseRelationsHistory.search_by_form_filter(
-            request.args.get('date_from', ''),
-            request.args.get('date_to', ''),
-            request.args.get('sense_id', ''),
-            request.args.get('user', ''),
-            request.args.get('relation_type', '')
-        )
-    )
-
-    pagination = paginate(paginated_senses, page, 50, cache_key)
 
     return render_template(
         'sense/sense-relations-history.html',
-        form=filter_form,
-        users=users,
-        relations=relations,
-        history=pagination,
+        form=SenseRelationsHistoryForm(),
+        users=get_user_name_list(),
+        relations=get_sense_relation_list(),
+        history=relations,
         keycloak=KeycloakServiceClient()
     )
 
 
-@sense.route('/sense/<int:id>')
+@sense.route('/sense/<string:id>')
 @openid_connect.require_login
 def sense_by_id(id):
-
-    sense = Sense.query.get(id)
-    sense_hist = find_sense_history(id)
-
-    incoming_rel = find_sense_incoming_relations(id)
-    incoming_history = TrackerSenseRelationsHistory.query.filter(TrackerSenseRelationsHistory.target_id == id).all()
-
-    outgoing_rel = find_sense_outgoing_relations(id)
-    outgoing_history = TrackerSenseRelationsHistory.query.filter(TrackerSenseRelationsHistory.source_id == id).all()
-
-    emotions = Emotion.query.filter(Emotion.sense_id == id).all()
-    for e in emotions:
-        if e.emotions is None:
-            e.emotions = ''
-        if e.valuations is None:
-            e.valuations = ''
-        if e.markedness is None:
-            e.markedness = ''
-
-    morpho = Morphology.query.filter(Morphology.lexicalunit_id == id).all()
-
     return render_template(
         'sense/sense.html',
-        sense=sense,
+        sense=find_sense(id),
         pos=parts_of_speech(),
         domain=domain(),
         status=status(),
         aspect=aspect(),
-        sense_history=sense_hist,
-        incoming_rel=incoming_rel,
-        outgoing_rel=outgoing_rel,
-        outgoing_history=outgoing_history,
-        incoming_history=incoming_history,
-        emotions=emotions,
-        morpho=morpho,
+        sense_history=find_sense_history(id),
+        incoming_rel=find_sense_incoming_relations(id),
+        outgoing_rel=find_sense_outgoing_relations(id),
+        outgoing_history=find_sense_outgoing_relations_history(id),
+        incoming_history=find_sense_incoming_relations_history(id),
         keycloak=KeycloakServiceClient()
     )

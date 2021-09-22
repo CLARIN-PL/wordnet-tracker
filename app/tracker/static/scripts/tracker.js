@@ -92,7 +92,7 @@ var user_activity_now = function(date){
 };
 
 var user_activity_yesterday = function(){
-     var previousDay =  moment(new Date()).add(-1, 'days').format("YYYY-MM-DD").toString();
+     var previousDay =  moment(new Date()).add(-1, 'days').format("DD-MM-YYYY").toString();
      user_activity_now(previousDay);
      $("#chart-activity-name").text('Users Activity Yesterday');
 };
@@ -146,12 +146,12 @@ var draw_linear_graph = function(json){
 $(document).ready(function(){
     $('[data-toggle="tooltip"]').tooltip();
     $('#date_from').datetimepicker({
-        format: 'YYYY-MM-DD'
+        format: 'DD-MM-YYYY'
     });
     $('#date_to').datetimepicker({
-        format: 'YYYY-MM-DD'
+        format: 'DD-MM-YYYY'
     });
     $('#activity_date').datetimepicker({
-        format: 'YYYY-MM-DD'
+        format: 'DD-MM-YYYY'
     });
 });

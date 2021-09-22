@@ -1,91 +1,128 @@
+from calendar import monthrange
 from datetime import datetime, timedelta
 from time import gmtime, strftime
+from ply.cpp import xrange
 
-from flask_sqlalchemy import xrange
-from sqlalchemy import text
-
-from tracker.extensions import db, cache
+import requests
+import json
+from config.settings import API_SERVER_URL as api_server_url
 
 
 def find_created_items_today():
-    sql = text(
-        """
-        SELECT count(case when tr.inserted = 1 and tr.`table` = "synset" then  1 END) synset_created,
-               count(case when tr.inserted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_created,
-               count(case when tr.inserted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_created,
-               count(case when tr.inserted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_created 
-        FROM tracker tr WHERE DATE(tr.datetime) = :now GROUP BY DATE(tr.datetime)
-        """
-    )
-
-    return db.engine.execute(sql, {'now': strftime("%Y-%m-%d", gmtime())})
-
-
-def find_user_activity_now(today, user):
-    if user != '':
-        user = user.replace(" ", ".")
-        sql = text(
-            """
-            SELECT CASE WHEN tr.user IS NULL THEN "Auto" ELSE tr.user END, TIME_FORMAT(tr.datetime, "%H:00"), count(tr.id)
-            FROM tracker tr WHERE DATE(tr.datetime) = :today AND tr.user=:user_name
-            GROUP BY tr.user, TIME_FORMAT(tr.datetime, "%H:00") order by TIME_FORMAT(tr.datetime, "%H:00")
-            """
+    result_dict = {"new_senses": 0,
+                   "new_sense_relations": 0,
+                   "new_synsets": 0,
+                   "new_synset_relations": 0}
+    try:
+        response = requests.get(
+            url=api_server_url + "stats/today"
         )
-        return db.engine.execute(sql, {'today': today, 'user_name': user})
-    else:
-        sql = text(
-            """
-            SELECT CASE WHEN tr.user IS NULL THEN "Auto" ELSE tr.user END, TIME_FORMAT(tr.datetime, "%H:00"), count(tr.id)
-            FROM tracker tr WHERE DATE(tr.datetime) = :today
-            GROUP BY tr.user, TIME_FORMAT(tr.datetime, "%H:00") order by TIME_FORMAT(tr.datetime, "%H:00")
-            """
-        )
-        return db.engine.execute(sql, {'today': today})
+        json_data = json.loads(response.text)
+
+        for stats in json_data["users_stats"]:
+            result_dict["new_senses"] += stats["senses_created"]
+            result_dict["new_sense_relations"] += stats["sense_relations_created"]
+            result_dict["new_synsets"] += stats["synsets_created"]
+            result_dict["new_synset_relations"] += stats["synset_relations_created"]
+    except Exception:
+        pass
+
+    return result_dict
 
 
-def user_activity_cached(day, user, update=False, timeout=3600):
-    cache_key = "USER_ACTIVITY_NOW_{}_{}".format(day, user)
+def find_day_activity(date, user):
+    users = set()
+    activity = []
 
-    result = cache.get(cache_key)
-    if update:
-        result = None
-    if result is not None:
-        d, users = result
-    else:
-        active = find_user_activity_now(day, user)
+    try:
+        if user != '':
+            response = requests.get(
+                url=api_server_url + "users/" + user + "/daily-activity/" + date
+            )
+            json_data = json.loads(response.text)
 
-        start_date = datetime(2018, 1, 1, 0, 0, 0)
-        d = []
-        v = []
-        users = set()
-        for x in active:
-            v.append(x)
-            users.add(x[0])
+            users.add(json_data["user"])
+            for stats in json_data["stats"]:
+                stats["user"] = json_data["user"]
+                activity.append(stats)
+        else:
+            response = requests.get(
+                url=api_server_url + "stats/date/" + date
+            )
+            json_data = json.loads(response.text)
 
-        for td in (start_date + timedelta(hours=1 * it) for it in xrange(24)):
-            row = dict()
-            row['y'] = td.strftime("%H:%M")
-            for u in users:
-                row[u] = 0
-            d.append(row)
+            for stats in json_data["users_stats"]:
+                users.add(stats["user"])
+                activity.append(stats)
 
-        for r in v:
-            for item in range(0, len(d)):
-                if d[item]['y'] == r[1]:
-                    d[item][r[0]] = r[2]
+    except Exception:
+        pass
 
-        cache.set(cache_key, (d, users), timeout=timeout)
+    return activity, users
+
+
+def count_all_operations(stats):
+    return int(stats["senses_created"] +
+               stats["senses_modified"] +
+               stats["senses_removed"] +
+               stats["sense_relations_created"] +
+               stats["sense_relations_modified"] +
+               stats["sense_relations_removed"] +
+               stats["synsets_created"] +
+               stats["synsets_modified"] +
+               stats["synsets_removed"] +
+               stats["synset_relations_created"] +
+               stats["synset_relations_modified"] +
+               stats["synset_relations_removed"])
+
+
+def users_daily_activity(date, user):
+    if date == '':
+        date = strftime("%d-%m-%Y", gmtime())
+    activity, users = find_day_activity(date, user)
+
+    d = []
+    start_date = datetime(2018, 1, 1, 0, 0, 0)
+    for td in (start_date + timedelta(hours=1 * it) for it in xrange(24)):
+        row = dict()
+        row['y'] = td.strftime("%H:%M")
+        for u in users:
+            row[u] = 0
+        d.append(row)
+
+    for act in activity:
+        d[act["hour"]][act["user"]] = count_all_operations(act)
+
     return d, users
 
 
 def find_user_activity_month(year, month, user):
-        user = user.replace(" ", ".")
-        sql = text(
-            """
-            SELECT tr.user, DATE_FORMAT(tr.datetime, "%d"), count(tr.id)
-            FROM tracker tr WHERE YEAR(tr.datetime) = :yr AND MONTH(tr.datetime)=:mnth AND tr.user=:user_name
-            GROUP BY tr.user, DATE_FORMAT( tr.datetime , "%d") order by DATE_FORMAT( tr.datetime , "%d")
-            """
-        )
+    users = set()
+    d = []
 
-        return db.engine.execute(sql, {'yr': year,'mnth': month, 'user_name': user})
+    if 9 >= int(month) >= 0:
+        month = '0' + str(int(month))
+
+    try:
+        response = requests.get(
+            url=api_server_url + "users/" + user + "/monthly-activity/01-" + month + "-" + year
+        )
+        json_data = json.loads(response.text)
+        user = json_data["user"]
+        users.add(user)
+        activity = json_data["stats"]
+
+        _max = monthrange(int(strftime("%Y", gmtime())), int(strftime("%m", gmtime())))[1] + 1
+        for m in range(1, _max):
+            row = dict()
+            row['y'] = str(m)
+            row[user] = 0
+            d.append(row)
+
+        for act in activity:
+            d[int(act["day"]) - 1][user] = count_all_operations(act)
+
+    except Exception:
+        pass
+
+    return d, users

@@ -6,12 +6,10 @@ from flask_admin.menu import MenuLink
 from flask_less import lessc
 from werkzeug.contrib.fixers import ProxyFix
 from tracker.blueprints.user.models import CurrentUser
-from tracker.blueprints.tracker_admin.models import AdminQuery
-from tracker.blueprints.tracker_admin.views import CustomAdminIndexView, AdminQueryView
+from tracker.blueprints.tracker_admin.views import CustomAdminIndexView
 
 from tracker.extensions import (
     debug_toolbar,
-    db,
     openid_connect,
     limiter,
     csrf
@@ -24,7 +22,6 @@ blueprints_to_import = [
     "page",
     "synset",
     "sense",
-    "emotion",
     "user",
     "keycloak_debug"
 ]
@@ -32,19 +29,10 @@ blueprints_to_import = [
 
 def create_app(settings_override=None):
     app = __create_app(settings_override)
-    db.create_all(app=app)
-    from tracker.celery import celery  # called to run celery setup correctly  # noqa: F401
     register_blueprints(app)
     register_admin(app)
     inject_global_args(app)
     return app
-
-
-def create_app_celery(setting_override=None):
-    # blueprints can not be registered for celery before the object gets created,
-    # as register_blueprints makes use of .tasks.py files, so it is necessary to first
-    # create the app, then create celery, then finally register apps
-    return __create_app(setting_override)
 
 
 def register_blueprints(app):
@@ -70,7 +58,6 @@ def register_admin(app):
             base_template='admin/base.html'
         )
         admin.add_link(MenuLink(name='Tracker', url=url_for('page.home')))
-        admin.add_view(AdminQueryView(AdminQuery, db.session, category='Models'))
 
 
 def inject_global_args(app):
@@ -121,7 +108,6 @@ def __extensions(app):
     """
     debug_toolbar.init_app(app)
     csrf.init_app(app)
-    db.init_app(app)
     openid_connect.init_app(app)
     limiter.init_app(app)
 

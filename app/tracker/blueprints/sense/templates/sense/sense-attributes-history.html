@@ -2,7 +2,7 @@
 {% import 'macros/items.html' as items %}
 {% import 'macros/form.html' as f with context %}
 
-{% block title %}Senses History{% endblock %}
+{% block title %}Senses Attributes History {% endblock %}
 
 {% block content %}
     <div id="page-wrapper">
@@ -13,7 +13,7 @@
         </div>
         <div class="row margin-bottom-15">
             <div class="col-sm-12">
-                {% call f.form_tag('sense.senses_history', css_class='form-inline', method='get') %}
+                {% call f.form_tag('sense.senses_attributes_history', css_class='form-inline', method='get') %}
 
                     <div class="input-group input-group-sm date" id='date_from'>
                         <input id="date_from" name="date_from" type="text" class="form-control"
@@ -51,26 +51,6 @@
                             {% endfor %}
                         </select>
                     </div>
-                     <div class="form-group form-group-sm">
-                        <select class="form-control" id="pos" name="pos">
-                            <option value=""  {% if request.args.get('pos', '') == '' %}selected{% endif %}>Select Part Of Speech</option>
-                            {% for k, v in pos.items() %}
-                             {% if k != 'None' %}
-                            <option value={{ k }} {% if request.args.get('pos', '') == k  %}selected{% endif %}>{{ v }}</option>
-                             {% endif %}
-                            {%  endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group form-group-sm">
-                        <select class="form-control" id="status" name="status">
-                            <option value=""  {% if request.args.get('status', '') == '' %}selected{% endif %}>Select Status</option>
-                            {% for k, v in status.items() %}
-                             {% if k != 'None' %}
-                                <option value={{ k }} {% if request.args.get('status', '') == k  %}selected{% endif %}>{{ v['value'] }}</option>
-                             {% endif %}
-                            {%  endfor %}
-                        </select>
-                    </div>
                     <div class="form-group form-group-sm">
                         <input class="form-control" id="sense_id" name="sense_id" placeholder="Sense ID" type="text"
                                value="{{ request.args.get('sense_id', '') }}">
@@ -79,7 +59,7 @@
                 {% endcall %}
             </div>
         </div>
-        {% if sense_history['pages'] == 0 %}
+        {% if sense_attributes_history['pages'] == 0 %}
             <h3>No results found</h3>
             <p>Try limiting or removing your search terms.</p>
         {% else %}
@@ -91,20 +71,19 @@
                             <tr>
                                 <th rowspan="2" class="col-header text-center">Audit Log</th>
                                 <th rowspan="2" class="col-header text-center">Operation</th>
-                                <th rowspan="2" colspan="2" class="col-header text-center">Key</th>
-                                <th colspan="6" class="text-center" scope="colgroup">Attributes</th>
+                                <th rowspan="2" colspan="1" class="col-header text-center">Key</th>
+                                <th colspan="5" class="text-center" scope="colgroup">Attributes</th>
                             </tr>
                             <tr>
-                                <th class="col-header">lemma</th>
-                                <th class="col-header">variant</th>
-                                <th class="col-header">domain</th>
-                                <th class="col-header">pos</th>
-                                <th class="col-header">status</th>
+                                <th class="col-header">register</th>
+                                <th class="col-header">definition</th>
+                                <th class="col-header">comment</th>
+                                <th class="col-header">status error comment</th>
                                 <th class="col-header">owner</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {% for sh in sense_history['senses'] %}
+                            {% for sh in sense_attributes_history['attributes'] %}
                                 {% if sh['operation'] == 1 %}
                                     {% set rowsp = 2 %}
                                     <tr class="info">
@@ -136,12 +115,9 @@
                             </div>
                             </td>
                             <td rowspan="{{ rowsp }}">
-                                {% if  sh['id'] is not none %}
-                                    <a href="{{ url_for('sense.sense_by_id', id=sh['id']) }}"> {{ sh['id'] }}</a>
+                                {% if  sh['sense_id'] is not none %}
+                                    <a href="{{ url_for('sense.sense_by_id', id=sh['sense_id']) }}"> {{ sh['sense_id'] }}</a>
                                 {% endif %}
-                            </td>
-                            <td rowspan="{{ rowsp }}">
-                                {{ sh['lemma'] }}
                             </td>
                              {%  if rowsp == 2 %}
                                  {% set st_bg ="style=background-color:#EEE"  %}
@@ -149,20 +125,18 @@
                                  {% set st_bg=''  %}
                              {% endif %}
 
-                            <td {{ st_bg }}>{% if "lemma" in sh %} {{ sh['lemma'] }} {% endif %}</td>
-                            <td {{ st_bg }}>{% if "variant" in sh %} {{ sh['variant'] }} {% endif %}</td>
-                            <td {{ st_bg }}>{% if "domain" in sh %} {{ domain[sh['domain']|string] }} {% endif %}</td>
-                            <td {{ st_bg }}>{% if "part_of_speed" in sh %} <span class="label label-default">{{ pos[sh['part_of_speed']|string] }} </span> {% endif %}</td>
-                            <td {{ st_bg }}>{% if "status" in sh %} <span class="label {{ status[sh['status']|string]['tag'] }}">{{ status[sh['status']|string]['value']}}</span> {% endif %}</td>
+                            <td {{ st_bg }}>{% if "register" in sh %} {{ sh['register'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "definition" in sh %} {{ sh['definition'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "comment" in sh %} {{ sh['comment'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "status_error_comment" in sh %} {{ sh['status_error_comment'] }} {% endif %}</td>
                             <td {{ st_bg }}>{% if "owner" in sh %} {{ sh['owner'] }} {% endif %}</td>
                             </tr>
                                 {% if rowsp == 2 %}
                                     <tr>
-                                        <td class="info">{% if "before_lemma" in sh %} {{ sh['before_lemma'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_variant" in sh %} {{ sh['before_variant'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_domain" in sh %} {{ domain[sh['before_domain']] }} {% endif %}</td>
-                                        <td class="info">{% if "before_part_of_speed" in sh %} <span class="label label-default">{{ pos[sh['before_part_of_speed']|string] }}</span> {% endif %}</td>
-                                        <td class="info">{% if "before_status" in sh %} <span class="label {{ status[sh['before_status']|string]['tag'] }}">{{ status[sh['before_status']|string]['value']}}</span> {% endif %}</td>
+                                        <td class="info">{% if "before_register" in sh %} {{ sh['before_register'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_definition" in sh %} {{ sh['before_definition'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_comment" in sh %} {{ sh['before_comment'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_status_error_comment" in sh %} {{ sh['before_status_error_comment'] }} {% endif %}</td>
                                         <td class="info">{% if "before_owner" in sh %} {{ sh['before_owner'] }} {% endif %}</td>
                                     </tr>
                                 {% endif %}
@@ -176,7 +150,7 @@
             <div class="row">
                 <div class="col-sm-12">
                     <div class="pull-right">
-                        {{ items.paginate(sense_history) }}
+                        {{ items.paginate(sense_attributes_history) }}
                     </div>
                 </div>
             </div>

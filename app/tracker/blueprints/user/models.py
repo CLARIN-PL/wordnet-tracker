@@ -1,65 +1,53 @@
 import json
 from math import ceil
 from flask import current_app
-from sqlalchemy import text
+import requests
 from six.moves.urllib.parse import urlencode
 from httplib2 import Http
 from typing import Any, List, Dict, Iterable, Union
 
-from tracker.extensions import db, openid_connect
+from config.settings import API_SERVER_URL as api_server_url
+from tracker.extensions import openid_connect
 from config.settings import client_secrets
 from config.kc_admin_endpoints import (
     VIEW_USERS_URI, USER_CLIENT_ROLES_URI, VIEW_CLIENTS_URI
 )
 
 
-def user_activity_between_dates(from_date, to_date):
-    sql = text('SELECT tr.user, \
-        count(case when tr.inserted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_created,\
-        count(case when tr.inserted = 0 and tr.deleted = 0 and tr.`table` = "lexicalunit" then  1 END) sense_modified,\
-        count(case when tr.deleted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_removed, \
-        count(case when tr.inserted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_created,\
-        count(case when tr.deleted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_removed, \
-        count(case when tr.inserted = 1 and tr.`table` = "synset" then  1 END) synset_created, \
-        count(case when tr.inserted = 0 and tr.deleted = 0 and tr.`table` = "synset" then  1 END) synset_modified,\
-        count(case when tr.deleted = 1 and tr.`table` = "synset" then  1 END) synset_removed,\
-        count(case when tr.inserted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_created,\
-        count(case when tr.deleted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_removed\
-        FROM tracker tr WHERE DATE(tr.datetime) >= :from_date AND DATE(tr.datetime) <= :to_date AND tr.user is not null GROUP BY tr.user')
-    return db.engine.execute(sql, {'from_date': from_date, 'to_date': to_date})
+def users_activity_between_dates(from_date, to_date):
+    try:
+        response = requests.get(
+            url=api_server_url + "stats/dates/from/{from_date}/to/{to_date}".format(from_date=from_date, to_date=to_date)
+        )
+        return json.loads(response.text)["users_stats"]
+
+    except Exception:
+        return []
+
+
+def users_activity_day(date):
+    try:
+        response = requests.get(
+            url=api_server_url + "stats/date/{date}".format(date=date)
+        )
+        return json.loads(response.text)["users_stats"]
+
+    except Exception:
+        return []
 
 
 def user_activity_month(year, month, user):
-    user = user.replace(" ", ".")
-    sql = text('SELECT tr.user, \
-        count(case when tr.inserted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_created,\
-        count(case when tr.inserted = 0 and tr.deleted = 0 and tr.`table` = "lexicalunit" then  1 END) sense_modified,\
-        count(case when tr.deleted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_removed, \
-        count(case when tr.inserted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_created,\
-        count(case when tr.deleted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_removed, \
-        count(case when tr.inserted = 1 and tr.`table` = "synset" then  1 END) synset_created, \
-        count(case when tr.inserted = 0 and tr.deleted = 0 and tr.`table` = "synset" then  1 END) synset_modified,\
-        count(case when tr.deleted = 1 and tr.`table` = "synset" then  1 END) synset_removed,\
-        count(case when tr.inserted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_created,\
-        count(case when tr.deleted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_removed\
-        FROM tracker tr WHERE YEAR(tr.datetime) = :n_year AND MONTH(tr.datetime) = :n_month AND tr.user =:user_name GROUP BY tr.user')
-    return db.engine.execute(sql, {'n_year': year, 'n_month': month, 'user_name': user})
+    try:
+        response = requests.get(
+            url=api_server_url + "users/{user}/monthly-activity/01-{month}-{year}".format(user=user, month=month,
+                                                                                          year=year)
+        )
+        print(api_server_url + "users/{user}/monthly-activity/01-{month}-{year}".format(user=user, month=month,
+                                                                                          year=year))
+        return json.loads(response.text)["stats"]
 
-
-def user_activity_day(now_date):
-    sql = text('SELECT tr.user, \
-        count(case when tr.inserted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_created,\
-        count(case when tr.inserted = 0 and tr.deleted = 0 and tr.`table` = "lexicalunit" then  1 END) sense_modified,\
-        count(case when tr.deleted = 1 and tr.`table` = "lexicalunit" then  1 END) sense_removed, \
-        count(case when tr.inserted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_created,\
-        count(case when tr.deleted = 1 and tr.`table` = "lexicalrelation" then  1 END) senserelation_removed, \
-        count(case when tr.inserted = 1 and tr.`table` = "synset" then  1 END) synset_created, \
-        count(case when tr.inserted = 0 and tr.deleted = 0 and tr.`table` = "synset" then  1 END) synset_modified,\
-        count(case when tr.deleted = 1 and tr.`table` = "synset" then  1 END) synset_removed,\
-        count(case when tr.inserted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_created,\
-        count(case when tr.deleted = 1 and tr.`table` = "synsetrelation" then  1 END) synsetrelation_removed\
-        FROM tracker tr WHERE DATE(tr.datetime) = :now_date AND tr.user is not null GROUP BY tr.user')
-    return db.engine.execute(sql, {'now_date': now_date})
+    except Exception:
+        return []
 
 
 class CurrentUser:

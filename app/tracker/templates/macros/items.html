@@ -30,8 +30,65 @@
 {%- endmacro %}
 
 
-{# Paginate through a resource. #}
+{# Paginate through a api resource. #}
 {% macro paginate(resource) -%}
+  {% set args = request.args.to_dict() %}
+
+  <ul class="pagination">
+    <li class="{{ 'disabled' if resource['page'] == 1 }}">
+      {% if resource['page'] == 1 %}
+        <a aria-label="First">
+      {% else %}
+        <a href="{{ url_for(request.endpoint, page=1, **args) }}"
+            aria-label="First">
+      {% endif %}
+        &laquo; First
+      </a>
+    </li>
+    <li class="{{ 'disabled' if not resource['has_prev'] }}">
+      {% if not resource['has_prev'] %}
+        <a aria-label="Previous">
+      {% else %}
+        <a href="{{ url_for(request.endpoint, page=resource['page'] - 1, **args) }}"
+            aria-label="Previous">
+      {% endif %}
+        Prev
+      </a>
+    </li>
+  {%- for page in range((resource['page'] - 3) if (resource['page'] - 3) > 1 else 1, (resource['page'] + 5) if (resource['page'] + 5) < resource['pages'] else resource['pages']) %}
+    <li class="{{ 'active' if page == resource['page'] }}">
+        {% if page != resource['page'] %}
+          <a href="{{ url_for(request.endpoint, page=page, **args) }}">{{ page }}</a>
+        {% else %}
+          <span class="text-muted">{{ page }}</span>
+        {% endif %}
+    </li>
+  {%- endfor %}
+    <li class="{{ 'disabled' if not resource['has_next'] }}">
+      {% if not resource['has_next'] %}
+        <a aria-label="Next">
+      {% else %}
+        <a href="{{ url_for(request.endpoint, page=resource['page'] + 1, **args) }}"
+            aria-label="Next">
+      {% endif %}
+        Next
+      </a>
+    </li>
+    <li class="{{ 'disabled' if resource['page'] == resource['pages'] }}">
+    {% if resource['page'] == resource['pages'] %}
+      <a aria-label="Last">
+    {% else %}
+      <a href="{{ url_for(request.endpoint, page=resource['pages'], **args) }}"
+          aria-label="Last">
+    {% endif %}
+        Last &raquo;
+      </a>
+    </li>
+  </ul>
+{%- endmacro %}
+
+{# Paginate through a users resource. #}
+{% macro paginate_users(resource) -%}
   {% set args = request.args.to_dict() %}
 
   <ul class="pagination">
