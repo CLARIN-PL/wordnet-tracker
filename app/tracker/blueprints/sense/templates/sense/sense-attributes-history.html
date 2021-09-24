@@ -8,7 +8,7 @@
     <div id="page-wrapper">
         <div class="row">
             <div class="col-sm-12">
-                <h3 class="page-header"><i class="fa fa-object-group fa-fw"></i> Sense History</h3>
+                <h3 class="page-header"><i class="fa fa-object-group fa-fw"></i> Sense Attributes History</h3>
             </div>
         </div>
         <div class="row margin-bottom-15">
@@ -69,12 +69,14 @@
                         <table class="table table-bordered table-condensed table-hover table-striped">
                             <thead>
                             <tr>
+                                <th rowspan="2" class="col-header text-center">Revision</th>
                                 <th rowspan="2" class="col-header text-center">Audit Log</th>
                                 <th rowspan="2" class="col-header text-center">Operation</th>
-                                <th rowspan="2" colspan="1" class="col-header text-center">Key</th>
-                                <th colspan="5" class="text-center" scope="colgroup">Attributes</th>
+                                <th colspan="7" class="text-center" scope="colgroup">Attributes</th>
                             </tr>
                             <tr>
+                                <th class="col-header">key</th>
+                                <th class="col-header">lemma</th>
                                 <th class="col-header">register</th>
                                 <th class="col-header">definition</th>
                                 <th class="col-header">comment</th>
@@ -94,15 +96,18 @@
                                         {% set rowsp = 1 %}
                                     <tr class="danger">
                                 {% endif %}
-                              <td rowspan="{{ rowsp }}">
-                                 <div class="text-center small-log bold-log">
-                                    {{ sh['editor'] }}
-                                 </div>
-                                  <div class="text-center small-log">
-                                    <time class="short-date"
-                                      data-datetime="{{ sh['timestamp'] }}">{{ sh['timestamp'] }}</time>
-                                  </div>
-                              </td>
+                            <td rowspan="{{ rowsp }}">
+                                <div class="text-center small-log bold-log">
+                                  {{ sh['rev_id'] }}
+                                </div>
+                            </td>
+                            <td rowspan="{{ rowsp }}">
+                               <div class="text-center small-log bold-log">
+                                  {{ sh['editor'] }}
+                               </div><div class="text-center small-log">
+                                  {{ sh['datetime'] }}
+                               </div>
+                            </td>
                             <td rowspan="{{ rowsp }}">
                             <div class="text-center">
                                 {% if sh['operation'] == 1 %}
@@ -115,8 +120,13 @@
                             </div>
                             </td>
                             <td rowspan="{{ rowsp }}">
-                                {% if  sh['sense_id'] is not none %}
+                                {% if 'sense_id' in sh %}
                                     <a href="{{ url_for('sense.sense_by_id', id=sh['sense_id']) }}"> {{ sh['sense_id'] }}</a>
+                                {% endif %}
+                            </td>
+                            <td rowspan="{{ rowsp }}">
+                                {% if 'lemma' in sh %}
+                                    {{ sh['lemma'] }}
                                 {% endif %}
                             </td>
                              {%  if rowsp == 2 %}
@@ -129,17 +139,21 @@
                             <td {{ st_bg }}>{% if "definition" in sh %} {{ sh['definition'] }} {% endif %}</td>
                             <td {{ st_bg }}>{% if "comment" in sh %} {{ sh['comment'] }} {% endif %}</td>
                             <td {{ st_bg }}>{% if "status_error_comment" in sh %} {{ sh['status_error_comment'] }} {% endif %}</td>
-                            <td {{ st_bg }}>{% if "owner" in sh %} {{ sh['owner'] }} {% endif %}</td>
+                            <td rowspan="{{ rowsp }}">
+                            {% if "owner" in sh %}
+                                {{ sh['owner'] }}
+                            {% endif %}
+                            </td>
                             </tr>
-                                {% if rowsp == 2 %}
-                                    <tr>
-                                        <td class="info">{% if "before_register" in sh %} {{ sh['before_register'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_definition" in sh %} {{ sh['before_definition'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_comment" in sh %} {{ sh['before_comment'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_status_error_comment" in sh %} {{ sh['before_status_error_comment'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_owner" in sh %} {{ sh['before_owner'] }} {% endif %}</td>
-                                    </tr>
-                                {% endif %}
+                            {% if rowsp == 2 %}
+                                <tr>
+                                    <td class="info">{% if "before_register" in sh %} {{ sh['before_register'] }} {% endif %}</td>
+                                    <td class="info">{% if "before_definition" in sh %} {{ sh['before_definition'] }} {% endif %}</td>
+                                    <td class="info">{% if "before_comment" in sh %} {{ sh['before_comment'] }} {% endif %}</td>
+                                    <td class="info">{% if "before_status_error_comment" in sh %} {{ sh['before_status_error_comment'] }} {% endif %}</td>
+                                </tr>
+                            {% endif %}
+
                             {% endfor %}
                             </tbody>
                         </table>

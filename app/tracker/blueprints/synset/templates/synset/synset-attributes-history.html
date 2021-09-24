@@ -8,7 +8,7 @@
     <div id="page-wrapper">
         <div class="row">
             <div class="col-sm-12">
-                <h3 class="page-header"><i class="fa fa-sitemap fa-fw"></i> Synset History</h3>
+                <h3 class="page-header"><i class="fa fa-sitemap fa-fw"></i> Synset Attributes History</h3>
             </div>
         </div>
         <div class="row margin-bottom-15">
@@ -58,19 +58,15 @@
                     <div class="table-responsive">
                         <table class="table table-bordered table-condensed table-hover table-striped">
                             <thead>
-                            <colgroup span="3"></colgroup>
-                            <colgroup span="1"></colgroup>
-                            <colgroup span="3"></colgroup>
                             <tr>
-                                <th colspan="3" class="text-center" scope="colgroup">Operation</th>
-                                <th colspan="1" class="text-center" scope="colgroup">Synset</th>
+                                <th rowspan="2" class="text-center" scope="colgroup">Revision</th>
+                                <th rowspan="2" class="text-center" scope="colgroup">Audit Log</th>
+                                <th rowspan="2" class="text-center" scope="colgroup">Operation</th>
+                                <th rowspan="2" class="text-center" scope="colgroup">ID</th>
+                                <th rowspan="2" class="text-center" scope="colgroup">Units</th>
                                 <th colspan="3" class="text-center" scope="colgroup">Attributes</th>
                             </tr>
                             <tr>
-                                <th scope="col" class="col-header">#</th>
-                                <th scope="col" class="col-header">Audit Log</th>
-                                <th scope="col" class="col-header">Operation</th>
-                                <th scope="col" class="col-header">ID</th>
                                 <th scope="col" class="col-header">Comment</th>
                                 <th scope="col" class="col-header">Definition</th>
                                 <th scope="col" class="col-header">Error comment</th>
@@ -80,22 +76,24 @@
                             {% for synset in synsets_attributes_history['synset_atttributes'] %}
                                 {% if synset['operation'] == 1 %}
                                     <tr class="info">
+                                    {% set rowsp = 2 %}
                                 {% elif synset['operation'] == 0 %}
                                     <tr class="success">
+                                    {% set rowsp = 1 %}
                                 {% elif synset['operation'] == 2 %}
                                     <tr class="danger">
+                                    {% set rowsp = 1 %}
                                 {% endif %}
-                            <td>{{ synset['timestamp'] }}</td>
-                            <td>
+                            <td rowspan="{{ rowsp }}">{{ synset['rev_id'] }}</td>
+                            <td rowspan="{{ rowsp }}">
                             <div class="text-center small-log bold-log">
-                            {{ synset['editor'] }}
-                                </div>
-                                <div class="text-center small-log">
-                                <time class="short-date"
-                                      data-datetime="{{ synset['timestamp'] }}">{{ synset['timestamp'] }}</time>
-                                    </div>
+                                {{ synset['editor'] }}
+                            </div>
+                            <div class="text-center small-log">
+                                {{ synset['datetime'] }}
+                            </div>
                             </td>
-                            <td>
+                            <td rowspan="{{ rowsp }}">
                             <div class="text-center">
                                 {% if synset['operation'] == 1 %}
                                     <span class="label label-info">Modified</span>
@@ -106,13 +104,31 @@
                                 {% endif %}
                             </div>
                             </td>
-                            <td>
+                            <td rowspan="{{ rowsp }}">
                                 <a href="{{ url_for('synset.synset_by_id', id=synset['synset_id']) }}"> {{ synset['synset_id'] }}</a>
                             </td>
-                                <td>{% if "comment" in synset %} {{ synset['comment'] }} {% endif %}</td>
-                                <td>{% if "definition" in synset %} {{ synset['definition'] }} {% endif %}</td>
-                                <td>{% if "error_comment" in synset %} {{ synset['error_comment'] }} {% endif %}</td>
+                            <td rowspan="{{ rowsp }}">
+                                {% if "unit_strings" in synset %}
+                                    {{ synset['unit_strings'] }}
+                                {% endif %}
+                            </td>
+
+                            {%  if rowsp == 2 %}
+                                {% set st_bg ="style=background-color:#EEE"  %}
+                            {%  else %}
+                                {% set st_bg=''  %}
+                            {% endif %}
+                            <td {{ st_bg }}>{% if "comment" in synset %} {{ synset['comment'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "definition" in synset %} {{ synset['definition'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "error_comment" in synset %} {{ synset['error_comment'] }} {% endif %}</td>
                             </tr>
+                                {% if rowsp == 2 %}
+                                    <tr>
+                                        <td class="info">{% if "before_comment" in synset %} {{ synset['before_comment'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_definition" in synset %} {{ synset['before_definition'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_error_comment" in synset %} {{ synset['before_error_comment'] }} {% endif %}</td>
+                                    </tr>
+                                {% endif %}
                             {% endfor %}
                             </tbody>
                         </table>

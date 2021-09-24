@@ -66,7 +66,8 @@ def synsets_history(page):
         form=SynsetHistoryForm(),
         users=get_user_name_list(),
         synsets=history,
-        keycloak=KeycloakServiceClient()
+        keycloak=KeycloakServiceClient(),
+        status=status()
     )
 
 

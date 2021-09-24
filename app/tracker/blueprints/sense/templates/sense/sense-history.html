@@ -89,9 +89,10 @@
                         <table class="table table-bordered table-condensed table-hover table-striped">
                             <thead>
                             <tr>
+                                <th rowspan="2" class="col-header text-center">Revision</th>
                                 <th rowspan="2" class="col-header text-center">Audit Log</th>
                                 <th rowspan="2" class="col-header text-center">Operation</th>
-                                <th rowspan="2" colspan="2" class="col-header text-center">Key</th>
+                                <th rowspan="2" class="col-header text-center">Key</th>
                                 <th colspan="6" class="text-center" scope="colgroup">Attributes</th>
                             </tr>
                             <tr>
@@ -115,15 +116,19 @@
                                         {% set rowsp = 1 %}
                                     <tr class="danger">
                                 {% endif %}
-                              <td rowspan="{{ rowsp }}">
-                                 <div class="text-center small-log bold-log">
-                                    {{ sh['editor'] }}
-                                 </div>
-                                  <div class="text-center small-log">
-                                    <time class="short-date"
-                                      data-datetime="{{ sh['timestamp'] }}">{{ sh['timestamp'] }}</time>
-                                  </div>
-                              </td>
+                            <td rowspan="{{ rowsp }}">
+                                <div class="text-center small-log bold-log">
+                                  {{ sh['rev_id'] }}
+                                </div>
+                            </td>
+                            <td rowspan="{{ rowsp }}">
+                               <div class="text-center small-log bold-log">
+                                  {{ sh['editor'] }}
+                               </div>
+                               <div class="text-center small-log">
+                                  {{ sh['datetime'] }}
+                               </div>
+                            </td>
                             <td rowspan="{{ rowsp }}">
                             <div class="text-center">
                                 {% if sh['operation'] == 1 %}
@@ -140,9 +145,6 @@
                                     <a href="{{ url_for('sense.sense_by_id', id=sh['id']) }}"> {{ sh['id'] }}</a>
                                 {% endif %}
                             </td>
-                            <td rowspan="{{ rowsp }}">
-                                {{ sh['lemma'] }}
-                            </td>
                              {%  if rowsp == 2 %}
                                  {% set st_bg ="style=background-color:#EEE"  %}
                              {%  else %}
@@ -152,7 +154,7 @@
                             <td {{ st_bg }}>{% if "lemma" in sh %} {{ sh['lemma'] }} {% endif %}</td>
                             <td {{ st_bg }}>{% if "variant" in sh %} {{ sh['variant'] }} {% endif %}</td>
                             <td {{ st_bg }}>{% if "domain" in sh %} {{ domain[sh['domain']|string] }} {% endif %}</td>
-                            <td {{ st_bg }}>{% if "part_of_speed" in sh %} <span class="label label-default">{{ pos[sh['part_of_speed']|string] }} </span> {% endif %}</td>
+                            <td {{ st_bg }}>{% if "part_of_speech" in sh %} <span class="label label-default">{{ pos[sh['part_of_speech']|string] }} </span> {% endif %}</td>
                             <td {{ st_bg }}>{% if "status" in sh %} <span class="label {{ status[sh['status']|string]['tag'] }}">{{ status[sh['status']|string]['value']}}</span> {% endif %}</td>
                             <td {{ st_bg }}>{% if "owner" in sh %} {{ sh['owner'] }} {% endif %}</td>
                             </tr>
@@ -160,8 +162,8 @@
                                     <tr>
                                         <td class="info">{% if "before_lemma" in sh %} {{ sh['before_lemma'] }} {% endif %}</td>
                                         <td class="info">{% if "before_variant" in sh %} {{ sh['before_variant'] }} {% endif %}</td>
-                                        <td class="info">{% if "before_domain" in sh %} {{ domain[sh['before_domain']] }} {% endif %}</td>
-                                        <td class="info">{% if "before_part_of_speed" in sh %} <span class="label label-default">{{ pos[sh['before_part_of_speed']|string] }}</span> {% endif %}</td>
+                                        <td class="info">{% if "before_domain" in sh %} {{ domain[sh['before_domain']|string] }} {% endif %}</td>
+                                        <td class="info">{% if "before_part_of_speech" in sh %} <span class="label label-default">{{ pos[sh['before_part_of_speech']|string] }}</span> {% endif %}</td>
                                         <td class="info">{% if "before_status" in sh %} <span class="label {{ status[sh['before_status']|string]['tag'] }}">{{ status[sh['before_status']|string]['value']}}</span> {% endif %}</td>
                                         <td class="info">{% if "before_owner" in sh %} {{ sh['before_owner'] }} {% endif %}</td>
                                     </tr>

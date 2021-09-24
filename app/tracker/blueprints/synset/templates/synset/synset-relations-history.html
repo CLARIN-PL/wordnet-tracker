@@ -95,7 +95,7 @@
                                 <th colspan="2" class="text-center" scope="colgroup">Target Synset</th>
                             </tr>
                             <tr>
-                                <th scope="col" class="col-header">#</th>
+                                <th scope="col" class="col-header">Revision</th>
                                 <th scope="col" class="col-header">Audit Log</th>
                                 <th scope="col" class="col-header">Operation</th>
                                 <th scope="col" class="col-header">ID</th>
@@ -115,16 +115,14 @@
                                  {% elif r['operation'] == 2 %}
                                     <tr class="danger">
                                 {% endif %}
-                            <td>{{ r['timestamp'] }}</td>
+                            <td>{{ r['rev_id'] }}</td>
                             <td>
-                              <div class="text-center small-log bold-log">
-                                {{ r['editor'] }}
-                              </div>
+                                <div class="text-center small-log bold-log">
+                                  {{ r['editor'] }}
+                                </div>
                                 <div class="text-center small-log">
-                                <time class="short-date"
-                                      data-datetime="{{ r['timestamp'] }}">{{ r['timestamp'] }}</time>
-                              </div>
-
+                                    {{ r['datetime'] }}
+                                </div>
                             </td>
                             <td>
                             <div class="text-center">
