@@ -164,3 +164,25 @@ def find_sense_outgoing_relations_history(id):
 
     except Exception:
         return {}
+
+
+def find_sense_emotional_annotation(id):
+    try:
+        response = requests.get(
+            url=api_server_url + "senses/emotional-annotation/" + id
+        )
+        return json.loads(response.text)
+
+    except Exception:
+        return {}
+
+
+def find_sense_emotional_annotation_history(id):
+    try:
+        response = requests.get(
+            url=api_server_url + "sense-history/emotional-annotation/" + id
+        )
+        return json.loads(response.text)["emotional_annotation_history_list"]
+
+    except Exception:
+        return []

@@ -96,7 +96,7 @@
                                     </div>
                                     <div class="text-center small-log">
                                         <time class="short-date"
-                                              data-datetime="{{ s['timestamp'] }}">{{ s['timestamp'] }}
+                                              data-datetime="{{ s['datetime'] }}">{{ s['datetime'] }}
                                         </time>
                                     </div>
                                 </td>
@@ -188,7 +188,7 @@
                                     </div>
                                     <div class="text-center small-log">
                                         <time class="short-date"
-                                              data-datetime="{{ r['timestamp'] }}">{{ r['timestamp'] }}
+                                              data-datetime="{{ r['datetime'] }}">{{ r['datetime'] }}
                                         </time>
                                     </div>
                                 </td>
@@ -298,6 +298,111 @@
                                 <td>
                                     <a href="{{ url_for('sense.sense_by_id', id=r['sense_id']) }}"> {{ r['sense_name'] }}</a>
                                 </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-heart fa-fw"></i> Emotional Annotation
+                </div>
+                <div class="panel-body">
+                    {% if emotional == {} %}
+                    <h5 class="text-center">No emotional annotation found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Super annotation</th>
+                                <th class="text-center">Emotional characteristic</th>
+                                <th class="text-center">Emotions</th>
+                                <th class="text-center">Valuations</th>
+                                <th class="text-center">Markedness</th>
+                                <th class="text-center">Example 1</th>
+                                <th class="text-center">Example 2</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>{% if "super_annotation" in emotional %} {{ emotional['super_annotation'] }} {% endif %}</td>
+                                <td>{% if "emotional_characteristic" in emotional %} {{ emotional['emotional_characteristic'] }} {% endif %}</td>
+                                <td>{% if "emotions" in emotional %} {{ emotional['emotions'] }} {% endif %}</td>
+                                <td>{% if "valuations" in emotional %} {{ emotional['valuations'] }} {% endif %}</td>
+                                <td>{% if "markedness" in emotional %} {{ emotional['markedness'] }} {% endif %}</td>
+                                <td>{% if "example1" in emotional %} {{ emotional['example1'] }} {% endif %}</td>
+                                <td>{% if "example2" in emotional %} {{ emotional['example2'] }} {% endif %}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-heart fa-fw"></i> Emotional Annotation History
+                </div>
+                <div class="panel-body">
+                    {% if emotional_history|length == 0 %}
+                    <h5 class="text-center">No emotional annotation history found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Audit Log</th>
+                                <th class="text-center">Operation</th>
+                                <th class="text-center">Super annotation</th>
+                                <th class="text-center">Emotional characteristic</th>
+                                <th class="text-center">Emotions</th>
+                                <th class="text-center">Valuations</th>
+                                <th class="text-center">Markedness</th>
+                                <th class="text-center">Example 1</th>
+                                <th class="text-center">Example 2</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for e in emotional_history %}
+                            <tr>
+                                <td>
+                                    <div class="text-center small-log bold-log">
+                                        {{ e['editor'] }}
+                                    </div>
+                                    <div class="text-center small-log">
+                                        <time class="short-date"
+                                              data-datetime="{{ e['datetime'] }}">{{ e['datetime'] }}
+                                        </time>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        {% if e['operation'] == 0 %}
+                                             <span class="label label-success">Created</span>
+                                        {% elif e['operation'] == 1 %}
+                                             <span class="label label-info">Modified</span>
+                                        {% elif e['operation'] == 2 %}
+                                             <span class="label label-danger">Removed</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{% if "super_annotation" in e %} {{ e['super_annotation'] }} {% endif %}</td>
+                                <td>{% if "emotional_characteristic" in e %} {{ e['emotional_characteristic'] }} {% endif %}</td>
+                                <td>{% if "emotions" in e %} {{ e['emotions'] }} {% endif %}</td>
+                                <td>{% if "valuations" in e %} {{ e['valuations'] }} {% endif %}</td>
+                                <td>{% if "markedness" in e %} {{ e['markedness'] }} {% endif %}</td>
+                                <td>{% if "example1" in e %} {{ e['example1'] }} {% endif %}</td>
+                                <td>{% if "example2" in e %} {{ e['example2'] }} {% endif %}</td>
                             </tr>
                             {% endfor %}
                             </tbody>

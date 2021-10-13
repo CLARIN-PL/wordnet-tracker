@@ -22,6 +22,7 @@ blueprints_to_import = [
     "page",
     "synset",
     "sense",
+    "emotion",
     "user",
     "keycloak_debug"
 ]

@@ -89,10 +89,13 @@
                                     {% for s in synset_history %}
                                         <tr>
                                             <td>
-                                                <div class="text-center small-log bold-log">{{s['editor'] }}</div>
+                                                <div class="text-center small-log bold-log">
+                                                    {{ s['editor'] }}
+                                                </div>
                                                 <div class="text-center small-log">
-                                                <time class="short-date"
-                                                      data-datetime="{{ s['timestamp'] }}">{{ s['timestamp'] }}</time>
+                                                    <time class="short-date"
+                                                          data-datetime="{{ s['datetime'] }}">{{ s['datetime'] }}
+                                                    </time>
                                                 </div>
                                             </td>
                                             <td>
@@ -166,11 +169,14 @@
                                     {% for s in senses_history %}
                                         <tr>
                                             <td>
-                                                <div class="text-center small-log bold-log"> {{s['editor'] }} </div>
+                                                <div class="text-center small-log bold-log">
+                                                    {{ s['editor'] }}
+                                                </div>
                                                 <div class="text-center small-log">
-                                                <time class="short-date"
-                                                      data-datetime="{{ s['timestamp'] }}">{{ s['timestamp'] }}</time>
-                                            </div>
+                                                    <time class="short-date"
+                                                          data-datetime="{{ s['datetime'] }}">{{ s['datetime'] }}
+                                                    </time>
+                                                </div>
                                             </td>
                                             <td>
                                                  <div class="text-center">
@@ -252,13 +258,14 @@
                                     {% for r in incoming_history %}
                                         <tr>
                                              <td>
-                                            <div class="text-center small-log bold-log">
-                                                {{ r['editor'] }}
-                                            </div>
-                                            <div class="text-center small-log">
-                                                <time class="short-date"
-                                                      data-datetime="{{ r['timestamp'] }}">{{ r['timestamp'] }}</time>
-                                            </div>
+                                                <div class="text-center small-log bold-log">
+                                                    {{ r['editor'] }}
+                                                </div>
+                                                <div class="text-center small-log">
+                                                    <time class="short-date"
+                                                          data-datetime="{{ r['datetime'] }}">{{ r['datetime'] }}
+                                                    </time>
+                                                </div>
                                             </td>
                                             <td>
                                             <div class="text-center">
@@ -351,7 +358,8 @@
                                             </div>
                                             <div class="text-center small-log">
                                                 <time class="short-date"
-                                                      data-datetime="{{ r['timestamp'] }}">{{ r['timestamp'] }}</time>
+                                                      data-datetime="{{ r['datetime'] }}">{{ r['datetime'] }}
+                                                </time>
                                             </div>
                                             </td>
                                             <td>

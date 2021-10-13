@@ -1,0 +1,143 @@
+{% extends 'layouts/app.html' %}
+{% import 'macros/items.html' as items %}
+{% import 'macros/form.html' as f with context %}
+
+{% block title %}Emotional annotation{% endblock %}
+
+{% block content %}
+    <div id="page-wrapper">
+        <div class="row">
+            <div class="col-sm-12">
+                <h2 class="page-header"><i class="fa fa-deviantart fa-fw"></i> Emotional annotation</h2>
+            </div>
+        </div>
+        <div class="row margin-bottom-15">
+            <div class="col-sm-12">
+                {% call f.form_tag('emotion.emotional_annotation', css_class='form-inline', method='get') %}
+                    <div class="form-group form-group-sm">
+                        <select class="form-control" id="users" name="user">
+                            {% if request.args.get('user', '') == '' %}
+                                <option value="" disabled selected>Select User</option>
+                            {% else %}
+                                <option value="">Select User</option>
+                            {% endif %}
+                            {% for u in users %}
+                                {% if u is not none and u != '' %}
+                                    <option {% if request.args.get('user', '') == u %}
+                                        selected
+                                    {% endif %}>{{ u }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group form-group-sm">
+                        <input class="form-control" id="sense_id" name="sense_id" placeholder="Sense ID" type="text"
+                               value="{{ request.args.get('sense_id', '') }}">
+                    </div>
+                    <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-search"></i> Search</button>
+                {% endcall %}
+            </div>
+        </div>
+        {% if emotions|length == 0 %}
+            <h3>No results found</h3>
+            <p>Try limiting or removing your search terms.</p>
+        {% else %}
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th rowspan="2" class="col-header text-center">Revision</th>
+                                <th rowspan="2" class="col-header text-center">Audit Log</th>
+                                <th rowspan="2" class="col-header text-center">Operation</th>
+                                <th rowspan="2" class="col-header text-center">Sense</th>
+                                <th colspan="4" class="text-center" scope="colgroup">Attributes</th>
+                            </tr>
+                            <tr>
+                                <th class="col-header">Emotions</th>
+                                <th class="col-header">Valuations</th>
+                                <th class="col-header">Markedness</th>
+                                <th class="col-header">Editor</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for e in emotions['emotional_annotation'] %}
+                                {% if e['operation'] == 1 %}
+                                    {% set rowsp = 2 %}
+                                    <tr class="info">
+                                {% elif e['operation'] == 0 %}
+                                        {% set rowsp = 1 %}
+                                    <tr class="success">
+                                {% elif e['operation'] == 2 %}
+                                        {% set rowsp = 1 %}
+                                    <tr class="danger">
+                                {% endif %}
+                            <td rowspan="{{ rowsp }}">
+                                <div class="text-center small-log bold-log">
+                                  {{ e['rev_id'] }}
+                                </div>
+                            </td>
+                            <td rowspan="{{ rowsp }}">
+                               <div class="text-center small-log bold-log">
+                                  {{ e['editor'] }}
+                               </div>
+                               <div class="text-center small-log">
+                                  {{ e['datetime'] }}
+                               </div>
+                            </td>
+                            <td rowspan="{{ rowsp }}">
+                            <div class="text-center">
+                                {% if e['operation'] == 1 %}
+                                    <span class="label label-info">Modified</span>
+                                {% elif e['operation'] == 0 %}
+                                    <span class="label label-success">Created</span>
+                                {% elif e['operation'] == 2 %}
+                                    <span class="label label-danger">Removed</span>
+                                {% endif %}
+                            </div>
+                            </td>
+                            <td rowspan="{{ rowsp }}">
+                                {% if "sense_id" in e and "sense_lemma" in e %}
+                                    <a href="{{ url_for('sense.sense_by_id', id=e['sense_id']) }}"> {{ e['sense_lemma'] }}</a>
+                                {% endif %}
+                            </td>
+                             {%  if rowsp == 2 %}
+                                 {% set st_bg ="style=background-color:#EEE"  %}
+                             {%  else %}
+                                 {% set st_bg=''  %}
+                             {% endif %}
+
+                            <td {{ st_bg }}>{% if "emotions" in e %} {{ e['emotions'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "valuations" in e %} {{ e['valuations'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "markedness" in e %} {{ e['markedness'] }} {% endif %}</td>
+                            <td {{ st_bg }}>{% if "editor" in e %} {{ e['editor'] }} {% endif %}</td>
+                            </tr>
+                                {% if rowsp == 2 %}
+                                    <tr>
+                                        <td class="info">{% if "before_emotions" in e %} {{ e['before_emotions'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_valuations" in e %} {{ e['before_valuations'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_markedness" in e %} {{ e['before_markedness'] }} {% endif %}</td>
+                                        <td class="info">{% if "before_editor" in e %} {{ e['before_editor'] }} {% endif %}</td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- /.table-responsive -->
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="pull-right">
+                        {{ items.paginate(emotions) }}
+                    </div>
+                </div>
+            </div>
+            <!-- /.row -->
+            </div>
+        {% endif %}
+    </div>
+
+{% endblock %}
