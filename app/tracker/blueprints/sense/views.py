@@ -5,7 +5,8 @@ from tracker.blueprints.sense.models import get_sense_relation_list, find_sense,
     find_sense_history, find_sense_incoming_relations, find_sense_outgoing_relations, \
     get_senses_history_search, get_user_name_list, get_sense_relations_history_search, \
     find_sense_incoming_relations_history, find_sense_outgoing_relations_history, \
-    get_senses_attributes_history_search, find_sense_emotional_annotation, find_sense_emotional_annotation_history
+    get_senses_attributes_history_search, find_sense_emotional_annotation, find_sense_emotional_annotation_history, \
+    find_sense_morphologies
 from tracker.blueprints.user.models import KeycloakServiceClient
 from tracker.extensions import openid_connect
 
@@ -102,5 +103,6 @@ def sense_by_id(id):
         incoming_history=find_sense_incoming_relations_history(id),
         keycloak=KeycloakServiceClient(),
         emotional=find_sense_emotional_annotation(id),
-        emotional_history=find_sense_emotional_annotation_history(id)
+        emotional_history=find_sense_emotional_annotation_history(id),
+        morphologies=find_sense_morphologies(id)
     )

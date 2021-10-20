@@ -186,3 +186,14 @@ def find_sense_emotional_annotation_history(id):
 
     except Exception:
         return []
+
+
+def find_sense_morphologies(id):
+    try:
+        response = requests.get(
+            url=api_server_url + "senses/morphologies/" + id
+        )
+        return json.loads(response.text)["morphologies"]
+
+    except Exception:
+        return []

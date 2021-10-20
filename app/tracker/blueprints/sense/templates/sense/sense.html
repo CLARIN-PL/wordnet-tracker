@@ -413,5 +413,38 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-sign-out fa-fw"></i> Morphology
+                </div>
+                <div class="panel-body">
+                    {% if morphologies|length == 0 %}
+                    <h5 class="text-center">No morphological annotations found</h5>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-condensed table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Word From</th>
+                                <th class="text-center">Tag</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for m in morphologies %}
+                            <tr>
+                                <td>{{ m['word_form'] }}</td>
+                                <td>{{ m['morphological_tag'] }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
