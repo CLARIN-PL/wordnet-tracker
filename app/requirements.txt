@@ -22,7 +22,7 @@ Flask-WTF==0.14.*
 WTForms-Components==0.10.*
 
 # Extensions.
-celery==4.4.7
+celery==5.2.2
 celery-redbeat==1.0.0
 Flask-Admin==1.5.6
 flask-debugtoolbar==0.10.0
